@@ -6,25 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	imageContainer.style.padding = '20px';
 	document.body.appendChild(imageContainer);
 
-	const promptDisplay = document.createElement('div');
-	promptDisplay.id = 'prompt-display';
-	promptDisplay.style.position = 'fixed';
-	promptDisplay.style.top = '50%';
-	promptDisplay.style.left = '50%';
-	promptDisplay.style.transform = 'translate(-50%, -50%)';
-	promptDisplay.style.fontSize = '2em';
-	promptDisplay.style.fontWeight = 'bold';
-	promptDisplay.style.textAlign = 'center';
-	promptDisplay.style.padding = '20px';
-	promptDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-	promptDisplay.style.color = 'white';
-	promptDisplay.style.borderRadius = '10px';
-	promptDisplay.style.maxWidth = '80%';
-	promptDisplay.style.display = 'none';
-	promptDisplay.style.zIndex = '1000';
-	promptDisplay.style.transition = 'opacity 0.5s ease-in-out';
-	document.body.appendChild(promptDisplay);
-
 	const chatContainer = document.createElement('div');
 	chatContainer.id = 'chat-container';
 	chatContainer.style.padding = '20px';
@@ -33,10 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
 	chatContainer.style.margin = '0 auto';
 	document.body.insertBefore(chatContainer, imageContainer);
 
+	// Storage configuration
+	const STORAGE_KEYS = {
+		IMAGES: 'generatedImages2',
+		CHAT: 'chatHistory2'
+	};
+
 	// Load saved images from localStorage
 	function loadSavedImages() {
 		try {
-			const savedImages = JSON.parse(localStorage.getItem('generatedImages') || '[]');
+			const savedImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMAGES) || '[]');
 			savedImages.forEach(({ url, prompt, timestamp }) => {
 				addImageToPage(url, prompt, timestamp);
 			});
@@ -58,6 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			imgWrapper.style.color = 'red';
 			imgWrapper.textContent = 'Failed to load the generated image. Please try again.';
 		};
+		img.onload = () => {
+			// Scroll to bottom smoothly after image loads
+			window.scrollTo({
+				top: document.body.scrollHeight,
+				behavior: 'smooth'
+			});
+		};
 		img.src = url;
 		img.alt = `Generated image for prompt: ${prompt}`;
 		img.style.maxWidth = '100%';
@@ -66,9 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		img.style.marginBottom = '10px';
 		
 		const promptText = document.createElement('div');
-		promptText.style.fontSize = '14px';
-		promptText.style.color = '#666';
-		promptText.textContent = `Prompt: ${prompt}`;
+		promptText.style.fontSize = '24px';
+		promptText.style.color = '#333';
+		promptText.style.marginTop = '15px';
+		promptText.style.marginBottom = '5px';
+		const truncatedPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
+		promptText.textContent = `Prompt: ${truncatedPrompt}`;
 		
 		const dateText = document.createElement('div');
 		dateText.style.fontSize = '12px';
@@ -80,8 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		imgWrapper.appendChild(dateText);
 		imageContainer.appendChild(imgWrapper);
 		
-		// Scroll to the new image
-		window.scrollTo(0, document.body.scrollHeight);
+		// Initial scroll attempt (in case image is cached)
+		window.scrollTo({
+			top: document.body.scrollHeight,
+			behavior: 'smooth'
+		});
 		
 		return imgWrapper;
 	}
@@ -89,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Save image to localStorage
 	function saveImageToStorage(url, prompt) {
 		try {
-			const savedImages = JSON.parse(localStorage.getItem('generatedImages') || '[]');
+			const savedImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMAGES) || '[]');
 			const timestamp = new Date().toISOString();
 			savedImages.push({ url, prompt, timestamp });
-			localStorage.setItem('generatedImages', JSON.stringify(savedImages));
+			localStorage.setItem(STORAGE_KEYS.IMAGES, JSON.stringify(savedImages));
 		} catch (error) {
 			console.error('Error saving image to localStorage:', error);
 		}
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Chat history functions
 	function loadChatHistory() {
 		try {
-			const chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+			const chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT) || '[]');
 			chatHistory.forEach(message => {
 				addMessageToChat(message.role, message.content, message.timestamp, false);
 			});
@@ -114,14 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	function saveChatMessage(role, content) {
 		try {
-			const chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+			const chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT) || '[]');
 			const message = {
 				role,
 				content,
 				timestamp: new Date().toISOString()
 			};
 			chatHistory.push(message);
-			localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+			localStorage.setItem(STORAGE_KEYS.CHAT, JSON.stringify(chatHistory));
 			addMessageToChat(role, content, message.timestamp);
 		} catch (error) {
 			console.error('Error saving chat message:', error);
@@ -186,12 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				throw new Error('prompt is required for image generation');
 			}
 			try {
-				// Show the prompt display
-				const promptDisplay = document.getElementById('prompt-display');
-				promptDisplay.textContent = prompt;
-				promptDisplay.style.display = 'block';
-				promptDisplay.style.opacity = '1';
-
 				console.log('Sending image generation request with params:', {
 					prompt, steps, width, height, guidance, model_version, 
 					finetune_strength, use_complex_style
@@ -231,13 +225,15 @@ document.addEventListener('DOMContentLoaded', () => {
 				// Save image to localStorage and add to page
 				saveImageToStorage(result.output, prompt);
 				addImageToPage(result.output, prompt);
+				
+				// Scroll to the bottom after adding the new image
+				window.scrollTo({
+					top: document.body.scrollHeight,
+					behavior: 'smooth'
+				});
 
 				return { success: true, imageUrl: result.output };
 			} catch (error) {
-				// Hide the prompt display on error
-				const promptDisplay = document.getElementById('prompt-display');
-				promptDisplay.style.display = 'none';
-
 				console.error('Error in generateImage:', error);
 				throw error;
 			}
