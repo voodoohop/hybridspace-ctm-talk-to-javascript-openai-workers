@@ -1,12 +1,3 @@
-const hand = new Hand();
-
-function talkToTheHand() {
-	hand
-		.connect()
-		.then(() => console.log('Hand is ready'))
-		.catch((err) => console.error(err));
-}
-
 const fns = {
 	getPageHTML: () => {
 		return { success: true, html: document.documentElement.outerHTML };
@@ -19,9 +10,78 @@ const fns = {
 		document.body.style.color = color;
 		return { success: true, color };
 	},
-	showFingers: async ({ numberOfFingers }) => {
-		await hand.sendCommand(numberOfFingers);
-		return { success: true, numberOfFingers };
+	generateImage: async ({ prompt, // required
+		steps = 50, 
+		width = 1024, 
+		height = 1024, 
+		guidance = 4, 
+		model_version = "lora", 
+		finetune_strength = 1.3, 
+		use_complex_style = true 
+	}) => {
+		if (!prompt) {
+			throw new Error('prompt is required for image generation');
+		}
+		try {
+			console.log('Sending image generation request with params:', {
+				prompt, steps, width, height, guidance, model_version, 
+				finetune_strength, use_complex_style
+			});
+			
+			const response = await fetch('/generate-image', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					prompt,
+					steps,
+					width,
+					height,
+					guidance,
+					model_version,
+					finetune_strength,
+					use_complex_style
+				})
+			});
+			
+			const result = await response.json();
+			
+			if (!response.ok) {
+				console.error('Image generation failed:', result);
+				const errorMessage = result.message || result.error || 'Unknown error occurred';
+				throw new Error(`Failed to generate image: ${errorMessage}`);
+			}
+			
+			console.log('Image generated successfully:', result);
+			
+			if (!result.output) {
+				throw new Error('No output URL received from the image generation service');
+			}
+
+			// Add the generated image to the page
+			const img = document.createElement('img');
+			img.onerror = (error) => {
+				console.error('Failed to load image:', error);
+				const errorDiv = document.createElement('div');
+				errorDiv.style.color = 'red';
+				errorDiv.textContent = 'Failed to load the generated image. Please try again.';
+				document.body.appendChild(errorDiv);
+			};
+			// The output is the direct URL string
+			img.src = result.output;
+			img.alt = `Generated image for prompt: ${prompt}`;
+			img.style.maxWidth = '100%';
+			img.style.height = 'auto';
+			img.style.margin = '20px 0';
+			img.style.display = 'block';
+			document.body.appendChild(img);
+			
+			return { success: true, imageUrl: result.output };
+		} catch (error) {
+			console.error('Error in generateImage:', error);
+			throw error;
+		}
 	},
 };
 
@@ -44,46 +104,87 @@ function configureData() {
 		type: 'session.update',
 		session: {
 			modalities: ['text', 'audio'],
-			// Provide the tools. Note they match the keys in the `fns` object above
 			tools: [
 				{
 					type: 'function',
 					name: 'changeBackgroundColor',
-					description: 'Changes the background color of a web page',
+					description: 'Change the background color of the page',
 					parameters: {
 						type: 'object',
 						properties: {
-							color: { type: 'string', description: 'A hex value of the color' },
+							color: {
+								type: 'string',
+								description: 'The color to change the background to',
+							},
 						},
+						required: ['color'],
 					},
 				},
 				{
 					type: 'function',
 					name: 'changeTextColor',
-					description: 'Changes the text color of a web page',
+					description: 'Change the text color of the page',
 					parameters: {
 						type: 'object',
 						properties: {
-							color: { type: 'string', description: 'A hex value of the color' },
+							color: {
+								type: 'string',
+								description: 'The color to change the text to',
+							},
 						},
+						required: ['color'],
 					},
 				},
 				{
 					type: 'function',
-					name: 'showFingers',
-					description: 'Controls a robot hand to show a specific number of fingers',
+					name: 'generateImage',
+					description: 'Generate an image using the hybrid-space-bfl model',
 					parameters: {
 						type: 'object',
 						properties: {
-							numberOfFingers: { type: 'string', description: 'Values 1 through 5 of the number of fingers to hold up' },
+							prompt: {
+								type: 'string',
+								description: 'The prompt to generate an image for',
+							},
+							steps: {
+								type: 'number',
+								description: 'Number of inference steps',
+								default: 50
+							},
+							width: {
+								type: 'number',
+								description: 'Width of the generated image',
+								default: 1024
+							},
+							height: {
+								type: 'number',
+								description: 'Height of the generated image',
+								default: 1024
+							},
+							guidance: {
+								type: 'number',
+								description: 'Guidance scale for generation',
+								default: 4
+							},
+							model_version: {
+								type: 'string',
+								description: 'Version of the model to use',
+								default: 'lora'
+							},
+							finetune_strength: {
+								type: 'number',
+								description: 'Strength of the fine-tuning',
+								default: 1.3
+							},
+							use_complex_style: {
+								type: 'boolean',
+								description: 'Whether to use complex style',
+								default: true
+							}
 						},
-					},
-				},
-				{
-					type: 'function',
-					name: 'getPageHTML',
-					description: 'Gets the HTML for the current page',
-				},
+						required: ['prompt']
+					}
+				}
 			],
 		},
 	};
