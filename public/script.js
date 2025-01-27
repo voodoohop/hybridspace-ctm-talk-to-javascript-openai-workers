@@ -6,6 +6,25 @@ document.addEventListener('DOMContentLoaded', () => {
 	imageContainer.style.padding = '20px';
 	document.body.appendChild(imageContainer);
 
+	const promptDisplay = document.createElement('div');
+	promptDisplay.id = 'prompt-display';
+	promptDisplay.style.position = 'fixed';
+	promptDisplay.style.top = '50%';
+	promptDisplay.style.left = '50%';
+	promptDisplay.style.transform = 'translate(-50%, -50%)';
+	promptDisplay.style.fontSize = '2em';
+	promptDisplay.style.fontWeight = 'bold';
+	promptDisplay.style.textAlign = 'center';
+	promptDisplay.style.padding = '20px';
+	promptDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+	promptDisplay.style.color = 'white';
+	promptDisplay.style.borderRadius = '10px';
+	promptDisplay.style.maxWidth = '80%';
+	promptDisplay.style.display = 'none';
+	promptDisplay.style.zIndex = '1000';
+	promptDisplay.style.transition = 'opacity 0.5s ease-in-out';
+	document.body.appendChild(promptDisplay);
+
 	const chatContainer = document.createElement('div');
 	chatContainer.id = 'chat-container';
 	chatContainer.style.padding = '20px';
@@ -167,6 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
 				throw new Error('prompt is required for image generation');
 			}
 			try {
+				// Show the prompt display
+				const promptDisplay = document.getElementById('prompt-display');
+				promptDisplay.textContent = prompt;
+				promptDisplay.style.display = 'block';
+				promptDisplay.style.opacity = '1';
+
 				console.log('Sending image generation request with params:', {
 					prompt, steps, width, height, guidance, model_version, 
 					finetune_strength, use_complex_style
@@ -206,9 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				// Save image to localStorage and add to page
 				saveImageToStorage(result.output, prompt);
 				addImageToPage(result.output, prompt);
-				
+
 				return { success: true, imageUrl: result.output };
 			} catch (error) {
+				// Hide the prompt display on error
+				const promptDisplay = document.getElementById('prompt-display');
+				promptDisplay.style.display = 'none';
+
 				console.error('Error in generateImage:', error);
 				throw error;
 			}
