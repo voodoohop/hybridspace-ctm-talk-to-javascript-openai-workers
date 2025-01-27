@@ -167,102 +167,20 @@ app.post('/generate-image', async (c) => {
 		console.log('Received image generation request:', await c.req.json());
 		const body = await c.req.json();
 		
-		console.log('Making request to Replicate API...');
-		const replicateResponse = await fetch(
-			'https://api.replicate.com/v1/predictions',
-			{
-				method: 'POST',
-				headers: {
-					'Authorization': `Token ${c.env.REPLICATE_API_TOKEN}`,
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					version: "6e1e2faebb07594bb54450016242d4d93a1a79fea410de18fca206b0fb2f1de9",
-					input: {
-						prompt: body.prompt,
-						steps: body.steps,
-						width: body.width,
-						height: body.height,
-						guidance: body.guidance,
-						model_version: body.model_version,
-						finetune_strength: body.finetune_strength,
-						use_complex_style: body.use_complex_style
-					}
-				})
-			}
-		);
-
-		if (!replicateResponse.ok) {
-			const errorText = await replicateResponse.text();
-			console.error('Replicate API error:', {
-				status: replicateResponse.status,
-				statusText: replicateResponse.statusText,
-				body: errorText
-			});
-			return c.json({ 
-				error: 'Failed to generate image',
-				details: {
-					status: replicateResponse.status,
-					statusText: replicateResponse.statusText,
-					body: errorText
-				}
-			}, 500);
-		}
-
-		const prediction = await replicateResponse.json();
-		console.log('Prediction started:', prediction);
+		// TEMPORARY CHANGE: Using Pollinations API instead of Replicate to reduce costs
+		// Added isometric flat style to maintain consistent style while using the free API
+		const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(body.prompt + " isometric flat style")}?width=${body.width}&height=${body.height}`;
 		
-		// Poll for the result
-		let result;
-		let attempts = 0;
-		const maxAttempts = 60; // Increase to 60 seconds max wait time
+		// Simulate a delay to maintain similar behavior to original code
+		await new Promise(resolve => setTimeout(resolve, 2000));
 		
-		while (!result?.output && attempts < maxAttempts) {
-			attempts++;
-			await new Promise(resolve => setTimeout(resolve, 1000));
-			console.log(`Polling attempt ${attempts}/${maxAttempts}...`);
-			
-			const statusResponse = await fetch(
-				`https://api.replicate.com/v1/predictions/${prediction.id}`,
-				{
-					headers: {
-						'Authorization': `Token ${c.env.REPLICATE_API_TOKEN}`,
-					},
-				}
-			);
-			
-			if (!statusResponse.ok) {
-				console.error('Error checking prediction status:', await statusResponse.text());
-				continue;
-			}
-			
-			result = await statusResponse.json();
-			console.log('Current result:', result);
-
-			// If there's an error in the result, return it immediately
-			if (result.error) {
-				return c.json({ error: `Generation failed: ${result.error}` }, 500);
-			}
-
-			// If the status is failed, return error
-			if (result.status === 'failed') {
-				return c.json({ error: 'Image generation failed' }, 500);
-			}
-
-			// If we have output, break early
-			if (result.output) {
-				break;
-			}
-		}
-		
-		if (!result?.output) {
-			return c.json({ 
-				error: 'Failed to generate image - timeout',
-				message: 'The image generation is taking longer than expected. Please try again.'
-			}, 500);
-		}
-
-		return c.json(result);
+		// Return in a format similar to Replicate's response
+		return c.json({
+			output: [pollinationsUrl],
+			status: "succeeded",
+			created_at: new Date().toISOString(),
+			completed_at: new Date().toISOString()
+		});
 	} catch (error) {
 		console.error('Unexpected error:', error);
 		return c.json({ 
