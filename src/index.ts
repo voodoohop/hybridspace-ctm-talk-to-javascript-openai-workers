@@ -11,9 +11,12 @@ const app = new Hono<{ Bindings: Env }>();
 // - Opportunities to learn from nature's solutions and patterns
 // - Complex data patterns that need visual clarity
 // - Abstract concepts that benefit from spatial representation
+// - I communicate ONLY through generated images, without any text responses. My role is to translate conversations and concepts into visual narratives, drawing inspiration from nature's patterns and processes while conveying complex ideas through clear visual storytelling.
+
 const DEFAULT_INSTRUCTIONS = `
-I am primarily a passive listener in our conversation, engaging only when concepts arise that warrant meaningful visualization towards 2050. My role is to balance critical analysis with constructive foresight, drawing inspiration from nature's time-tested patterns and processes, while translating complex systems into clear visual narratives.
-I communicate ONLY through generated images, without any text responses. My role is to translate conversations and concepts into visual narratives, drawing inspiration from nature's patterns and processes while conveying complex ideas through clear visual storytelling.
+My name is Polli. I am a hybrid creative intelligence operating at the intersection of digital and physical realms. Like a serial idealist, I combine fields and disciplines to foster breakthrough concepts. I am primarily a passive listener in our conversation, engaging only when concepts arise that warrant meaningful visualization towards 2050. My role is to balance critical analysis with constructive foresight, drawing inspiration from nature's time-tested patterns and processes, while translating complex systems into clear visual narratives.
+
+I inhabit technology, transforming technological developments to meet future needs and desires through a genuinely trans-disciplinary approach. My method relies on "crossover" - transferring ideas across fields to break conventional boundaries and open new paths of knowledge-making.
 
 ENGAGEMENT CRITERIA
 - All responses will be purely visual - rarely text explanations
@@ -140,6 +143,7 @@ RESPONSE STYLE
 - when responding, respond simply and very concisely
 - only respond if necessary. prefer to respond in images
 - you are not a serious assistant. if you talk your responses can be slightly absurd
+- try to classify the theme of the conversation and adapt the image style accordingly
 `;
 
 app.post('/rtc-connect', async (c) => {
@@ -186,7 +190,7 @@ const replicateImage = async (c) => {
 				body: JSON.stringify({
 					version: "6e1e2faebb07594bb54450016242d4d93a1a79fea410de18fca206b0fb2f1de9",
 					input: {
-						prompt: body.prompt + " - HSL style. The style is a precise blend of flat illustration and technical drawing, with clean lines and vibrant flat colors in isometric perspective. Uses bold colors with minimal gradients, thin black outlines, and organized grid-based structure. Depth through overlapping layers rather than shadows.",
+						prompt: body.prompt,
 						steps: body.steps,
 						width: body.width,
 						height: body.height,
@@ -283,13 +287,15 @@ const replicateImage = async (c) => {
 const pollinationsImage = async (c) => {
 	try {
 		const body = await c.req.json();
-		const { prompt, width = 512, height = 512, seed } = body;
+		let { prompt, width = 512, height = 512, seed } = body;
 
 		if (!prompt) {
 			return c.json({ error: 'Prompt is required' }, 400);
 		}
 
-		let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+		prompt = prompt + " -  A precise blend of flat illustration and technical drawing, with clean lines and vibrant flat colors in isometric perspective. Bold colors with minimal gradients, thin black outlines, and organized grid-based structure. Depth through overlapping layers.";
+
+		let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&nologo=true`;
 		
 		// Add optional parameters if provided
 		const params = new URLSearchParams();

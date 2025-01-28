@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Storage configuration
 	const STORAGE_KEYS = {
-		IMAGES: 'generatedImages2',
-		CHAT: 'chatHistory2'
+		IMAGES: 'generatedImages4',
+		CHAT: 'chatHistory4'
 	};
 
 	// Load saved images from localStorage
