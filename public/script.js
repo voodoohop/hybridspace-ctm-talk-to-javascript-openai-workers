@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	const imageContainer = document.createElement('div');
 	imageContainer.id = 'image-container';
 	imageContainer.style.padding = '20px';
+	imageContainer.style.maxWidth = '800px';
+	imageContainer.style.margin = '0 auto';
 	document.body.appendChild(imageContainer);
 
 	const chatContainer = document.createElement('div');
@@ -13,6 +15,28 @@ document.addEventListener('DOMContentLoaded', () => {
 	chatContainer.style.maxWidth = '800px';
 	chatContainer.style.margin = '0 auto';
 	document.body.insertBefore(chatContainer, imageContainer);
+
+	// Add mute toggle button
+	const muteContainer = document.createElement('div');
+	muteContainer.style.position = 'fixed';
+	muteContainer.style.top = '20px';
+	muteContainer.style.right = '20px';
+	muteContainer.style.zIndex = '1000';
+	document.body.appendChild(muteContainer);
+
+	const muteButton = document.createElement('button');
+	muteButton.innerHTML = '🎤 Mute';
+	muteButton.style.padding = '10px 20px';
+	muteButton.style.fontSize = '16px';
+	muteButton.style.borderRadius = '5px';
+	muteButton.style.border = '1px solid #ccc';
+	muteButton.style.backgroundColor = '#fff';
+	muteButton.style.cursor = 'pointer';
+	muteContainer.appendChild(muteButton);
+
+	let isMuted = false;
+	let audioContext;
+	let mediaStreamSource;
 
 	// Storage configuration
 	const STORAGE_KEYS = {
@@ -38,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	function addImageToPage(url, prompt, timestamp = new Date().toISOString()) {
 		const imgWrapper = document.createElement('div');
 		imgWrapper.style.marginBottom = '30px';
+		imgWrapper.style.maxWidth = '800px';
+		imgWrapper.style.width = '100%';
+		imgWrapper.style.margin = '0 auto';
 		
 		const img = document.createElement('img');
 		img.onerror = (error) => {
@@ -54,9 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 		img.src = url;
 		img.alt = `Generated image for prompt: ${prompt}`;
-		img.style.maxWidth = '100%';
+		img.style.maxWidth = '800px';
+		img.style.width = '100%';
 		img.style.height = 'auto';
 		img.style.display = 'block';
+		img.style.margin = '0 auto';
 		img.style.marginBottom = '10px';
 		
 		const promptText = document.createElement('div');
@@ -161,6 +190,24 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}
 
+	// Add prompt to page immediately
+	function addPromptToPage(prompt) {
+		const promptElement = document.createElement('div');
+		promptElement.style.margin = '20px auto';
+		promptElement.style.maxWidth = '800px';
+		promptElement.style.padding = '20px';
+		promptElement.style.borderRadius = '8px';
+		promptElement.style.backgroundColor = '#f0f0f0';
+		promptElement.style.textAlign = 'center';
+		promptElement.style.fontSize = '24px';
+		promptElement.style.fontWeight = 'bold';
+		promptElement.style.lineHeight = '1.4';
+		promptElement.innerHTML = prompt;
+		imageContainer.appendChild(promptElement);
+		window.scrollTo(0, document.body.scrollHeight);
+		return promptElement;
+	}
+
 	const fns = {
 		getPageHTML: () => {
 			return { success: true, html: document.documentElement.outerHTML };
@@ -185,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!prompt) {
 				throw new Error('prompt is required for image generation');
 			}
+			const promptElement = addPromptToPage(prompt);
 			try {
 				console.log('Sending image generation request with params:', {
 					prompt, steps, width, height, guidance, model_version, 
@@ -222,9 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
 					throw new Error('No output URL received from the image generation service');
 				}
 
-				// Save image to localStorage and add to page
-				saveImageToStorage(result.output, prompt);
-				addImageToPage(result.output, prompt);
+				// After successful image generation, remove the temporary prompt element
+				promptElement.remove();
+				const imageUrl = result.output;
+				addImageToPage(imageUrl, prompt);
+				saveImageToStorage(imageUrl, prompt);
 				
 				// Scroll to the bottom after adding the new image
 				window.scrollTo({
@@ -232,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					behavior: 'smooth'
 				});
 
-				return { success: true, imageUrl: result.output };
+				return { success: true, imageUrl };
 			} catch (error) {
 				console.error('Error in generateImage:', error);
 				throw error;
@@ -432,6 +482,20 @@ document.addEventListener('DOMContentLoaded', () => {
 					});
 				});
 		});
+	});
+
+	// Add mute toggle functionality
+	muteButton.addEventListener('click', () => {
+		isMuted = !isMuted;
+		muteButton.innerHTML = isMuted ? '🔇 Unmute' : '🎤 Mute';
+		muteButton.style.backgroundColor = isMuted ? '#ffebee' : '#fff';
+		
+		// Add visual feedback when muted
+		if (isMuted) {
+			addMessageToChat('system', 'Microphone muted - OpenAI will not receive audio until unmuted');
+		} else {
+			addMessageToChat('system', 'Microphone unmuted - OpenAI will now receive audio');
+		}
 	});
 
 	// Load both chat and images
