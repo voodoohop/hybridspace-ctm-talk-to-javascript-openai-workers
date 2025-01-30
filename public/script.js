@@ -351,11 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
 									type: 'string',
 									description: 'The prompt to generate an image for',
 								},
-								steps: {
-									type: 'number',
-									description: 'Number of inference steps',
-									default: 50
-								},
 								width: {
 									type: 'number',
 									description: 'Width of the generated image',
@@ -373,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 								},
 								model_version: {
 									type: 'string',
-									description: 'Version of the model to use',
+									description: 'Version of the model to use lora/finetune/finetune_old',
 									default: 'lora'
 								},
 								finetune_strength: {
@@ -381,11 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
 									description: 'Strength of the fine-tuning',
 									default: 1.3
 								},
-								use_complex_style: {
-									type: 'boolean',
-									description: 'Whether to use complex style',
-									default: true
-								}
 							},
 							required: ['prompt']
 						}
