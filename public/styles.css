@@ -1,26 +1,82 @@
-/* Ensure the body takes up the full height */
+/* Modern typography and layout inspired by Hybrid Space Lab */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
 body {
     margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    color: #000;
+    background: #fff;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
 }
 
-/* Main content should expand to fill available space */
 .content {
     flex: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
 }
 
-/* Sticky footer styling */
+h1 {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+}
+
+p {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+button {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #333;
+}
+
+#chat-container {
+    margin-bottom: 4rem;
+}
+
+#chat-container div {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+#image-container img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 2rem;
+}
+
 footer {
-    background-color: #333;
+    background-color: #000;
     color: #fff;
     text-align: center;
-    padding: 10px;
-    position: sticky;
-    bottom: 0;
+    padding: 2rem;
+    margin-top: 4rem;
 }
 
 footer a {
-	color: #fff;
+    color: #fff;
+    text-decoration: none;
+    border-bottom: 1px solid #fff;
+}
+
+footer a:hover {
+    border-bottom-width: 2px;
 }

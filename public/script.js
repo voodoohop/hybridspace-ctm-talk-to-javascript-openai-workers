@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Storage configuration
 	const STORAGE_KEYS = {
-		IMAGES: 'generatedImages4',
-		CHAT: 'chatHistory4'
+		IMAGES: 'generatedImages6',
+		CHAT: 'chatHistory6'
 	};
 
 	// Load saved images from localStorage
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		promptText.style.color = '#333';
 		promptText.style.marginTop = '15px';
 		promptText.style.marginBottom = '5px';
-		const truncatedPrompt = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
+		const truncatedPrompt = prompt.length > 200 ? prompt.substring(0, 200) + '...' : prompt;
 		promptText.textContent = `Prompt: ${truncatedPrompt}`;
 		
 		const dateText = document.createElement('div');
