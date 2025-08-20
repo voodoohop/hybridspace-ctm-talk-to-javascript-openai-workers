@@ -6,6 +6,7 @@
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
+    "local-network": "wrangler dev --ip 0.0.0.0 --port 8787",
     "test": "vitest",
     "cf-typegen": "wrangler types"
   },
