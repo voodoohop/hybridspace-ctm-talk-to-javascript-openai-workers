@@ -221,22 +221,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			return { success: true, color };
 		},
 		generateImage: async ({ prompt, // required
-			steps = 50, 
 			width = 1024, 
-			height = 1024, 
-			guidance = 4, 
-			model_version = "lora", 
-			finetune_strength = 1.3, 
-			use_complex_style = true 
+			height = 1024
 		}) => {
 			if (!prompt) {
 				throw new Error('prompt is required for image generation');
 			}
 			const promptElement = addPromptToPage(prompt);
 			try {
-				console.log('Sending image generation request with params:', {
-					prompt, steps, width, height, guidance, model_version, 
-					finetune_strength, use_complex_style
+				console.log('Sending Azure OpenAI image generation request with params:', {
+					prompt, width, height
 				});
 				
 				const response = await fetch('/generate-image', {
@@ -246,13 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
 					},
 					body: JSON.stringify({
 						prompt,
-						steps,
 						width,
-						height,
-						guidance,
-						model_version,
-						finetune_strength,
-						use_complex_style
+						height
 					})
 				});
 				
@@ -264,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					throw new Error(`Failed to generate image: ${errorMessage}`);
 				}
 				
-				console.log('Image generated successfully:', result);
+				console.log('Azure OpenAI image generated successfully:', result);
 				
 				if (!result.output) {
 					throw new Error('No output URL received from the image generation service');
@@ -303,11 +292,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const dataChannel = peerConnection.createDataChannel('response');
 
-	dataChannel.addEventListener('open', (ev) => {
+	dataChannel.addEventListener('open', async (ev) => {
 		console.log('Opening data channel', ev);
+		
+		// Fetch instructions from server
+		let instructions = '';
+		try {
+			const response = await fetch('/instructions');
+			const data = await response.json();
+			instructions = data.instructions;
+		} catch (error) {
+			console.error('Failed to fetch instructions:', error);
+		}
+		
 		const event = {
 			type: 'session.update',
 			session: {
+				instructions: instructions,
+				voice: 'ash',
 				modalities: ['text', 'audio'],
 				tools: [
 					{
@@ -343,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					{
 						type: 'function',
 						name: 'generateImage',
-						description: 'Generate an image using the hybrid-space-bfl model',
+						description: 'Generate an image using Azure OpenAI DALL-E',
 						parameters: {
 							type: 'object',
 							properties: {
@@ -353,29 +355,14 @@ document.addEventListener('DOMContentLoaded', () => {
 								},
 								width: {
 									type: 'number',
-									description: 'Width of the generated image',
+									description: 'Width of the generated image (default: 1024)',
 									default: 1024
 								},
 								height: {
 									type: 'number',
-									description: 'Height of the generated image',
+									description: 'Height of the generated image (default: 1024)',
 									default: 1024
-								},
-								guidance: {
-									type: 'number',
-									description: 'Guidance scale for generation',
-									default: 4
-								},
-								model_version: {
-									type: 'string',
-									description: 'Version of the model to use lora/finetune/finetune_old',
-									default: 'lora'
-								},
-								finetune_strength: {
-									type: 'number',
-									description: 'Strength of the fine-tuning',
-									default: 1.3
-								},
+								}
 							},
 							required: ['prompt']
 						}

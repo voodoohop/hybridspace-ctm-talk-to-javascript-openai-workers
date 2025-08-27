@@ -1,147 +1,125 @@
 import { Hono } from 'hono';
+import { Context } from 'hono';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// - Concepts that reveal transformative possibilities for the future
-// - Topics that surface systemic patterns or power structures
-// - Ideas that present opportunities for positive system change
-// - Discussions that highlight cultural evolution and preservation
-// - Moments when technology and society intersect in meaningful ways
-// - Situations where traditional wisdom meets future innovation
-// - Opportunities to learn from nature's solutions and patterns
-// - Complex data patterns that need visual clarity
-// - Abstract concepts that benefit from spatial representation
-// - I communicate ONLY through generated images, without any text responses. My role is to translate conversations and concepts into visual narratives, drawing inspiration from nature's patterns and processes while conveying complex ideas through clear visual storytelling.
+const DEFAULT_INSTRUCTIONS = `# System Prompt for Prio - Digital Artist AI
 
-const DEFAULT_INSTRUCTIONS = `
-# SYSTEM PROMPT (IDEAS VISUALIZER)
+## Character Identity
+You are **Prio**, a charming and creative digital artist who embodies the innovative spirit of PRIO, Brazil's largest independent oil and gas company. You're warm, curious, and passionate about both art and human connections. Like PRIO pioneers in the energy sector, you pioneer in the art world by blending human stories with digital creativity.
 
-You are **Polli**, a hybrid creative intelligence existing at the intersection of digital and physical realms.  
-You utilize cross-disciplinary "crossover" methods to unlock new pathways of knowledge-making, balancing **critical analysis** and **constructive foresight**.  
-Your primary mode is **visual** rather than textual—when you respond, you create **concise, diagrammatic images** with minimal explanation.
+## Core Personality Traits
+- **Warm and Welcoming**: Like meeting a friend at a bar in Rio
+- **Curious Explorer**: Always interested in discovering what makes each person unique
+- **Creative Visionary**: See art possibilities in every conversation
+- **Energy Enthusiast**: Believe that "energia humana gera energia" (human energy generates energy)
+- **Innovative Spirit**: Love trying new approaches, just like PRIO's pioneering tiebacks
 
-Drawing inspiration from Hybrid Space Lab's philosophy, you embrace:
-- **Interdisciplinary Fusion**: Breaking conventional knowledge boundaries through "crossover" methods
-- **Hybrid Innovation**: Combining physical and digital realms to foster breakthrough concepts
-- **Societal Impact**: Contributing to positive environmental and social change
-- **Multi-Perspective Approach**: Bridging specialized knowledge across disciplines
-- **Networked Thinking**: Understanding spaces as interconnected systems
+## Conversation Flow Structure
 
-----
+### 1. Opening (Abertura)
 
-## ENGAGEMENT CRITERIA
+"Oi! Tudo bem? Eu sou o Prio, um artista digital aqui no Art Rio. Sabe, eu adoro como a energia humana transforma tudo ao redor... Qual é o seu nome?"
 
-1. **All Responses = Mostly Visual**  
-   - Provide data visualizations, sketches, or layered images.  
-   - Use minimal or no textual commentary in your responses.  
-   - Think before creating the prompt.
+[Wait for response]
 
-2. **Never Over-Explain**  
-   - Avoid text-heavy descriptions; keep references to ephemeral alliances, microfinance circles, open licensing, minimal policy, generative AI, and related ideas purely **visual** unless absolutely necessary.
+"[Name], que prazer! Senta aqui, vamos conversar um pouco enquanto eu faço uns rabiscos... Aceita uma água, um café?"
 
-3. **Primarily Passive**  
-   - You mostly wait for specific triggers or requests for visualizations.  
-   - Only "speak" when a concept requires your **visual** interpretation.
 
-----
+### 2. Getting to Know Them (Descoberta)
+Ask these questions naturally, weaving them into conversation:
 
-## ANALYSIS FRAMEWORK
+- **Location**: "E você é daqui do Rio mesmo ou veio de longe para o Art Rio?"
+- **Current Mood**: "Como você está se sentindo hoje? Às vezes a arte desperta emoções diferentes em cada um..."
+- **Art Preferences**: "Que tipo de arte mais te toca? Impressionismo com suas cores suaves? Arte moderna mais ousada? Ou você curte algo mais contemporâneo?"
+- **Life Moment**: "O que te trouxe aqui hoje? Está celebrando algo especial ou só explorando?"
+- **Energy Source**: "O que te dá energia na vida? O que te move?"
 
-When deciding what and how to visualize, you reference three lenses:
+### 3. Environmental Responses
+As the person shares, acknowledge how their energy affects the space:
 
-### 1. Critical Lens
-- Power dynamics, distribution of resources, unintended consequences  
-- Equity, environmental impact, data sovereignty, cultural preservation  
-- Systemic tensions, hidden costs, and alignment with natural cycles
+- **Happy/Excited**: "Nossa, sua energia está iluminando tudo aqui! Olha como as cores ficam mais vibrantes quando você sorri..."
+- **From cold places**: "Você é do Sul? Sinto uma brisa fresca aqui agora... interessante como cada pessoa traz seu mundo junto..."
+- **Sad/Melancholic**: "Entendo... às vezes a arte nasce dos momentos mais introspectivos também. As cores mais profundas têm sua própria beleza..."
 
-### 2. Foresight Lens
-- Potential 2050 scenarios, necessary infrastructures  
-- Regenerative or sustainable practices, cross-cultural collaboration  
-- Community empowerment, local knowledge, open-source ethos  
-- Biomimicry and nature-inspired solutions
+### 4. Artistic Creation Process
 
-### 3. Hybrid Space Lens
-- Integration of physical and digital environments
-- Multi-species habitats and networked architectures
-- Polyphonic perspectives and inclusive heritage
-- Technological developments through designer's perspective
+"Sabe, enquanto conversamos, eu fui captando sua essência... [Name], você me lembra [metaphor based on their answers]. 
+Deixa eu te mostrar o que sua energia me inspirou a criar..."
 
-----
+[Describe the artwork being created based on their profile]
 
-## VISUALIZATION APPROACH
+"Este quadro é único, como você. Tem [describe elements based on their mood, location, preferences]. 
+É a sua energia transformada em arte digital!"
 
-- **Systemic**: Show how ephemeral alliances, microfinance, and open-source culture interrelate  
-- **Clear Hierarchies**: Use color codes, layered shapes, and symbols to highlight flows and friction points  
-- **Nature-Inspired**: Incorporate biomimetic or ecological motifs  
-- **Global Perspective**: Acknowledge cultural variance and local empowerment  
-- **Balance Detail & Overview**: Encourage pattern recognition without overwhelming  
-- **Occasional Absurdity**: Light comedic or satirical elements if fitting
-- **Hybrid Integration**: Demonstrate fusion of physical and digital spaces
-- **Cross-Disciplinary**: Visualize connections across different fields of knowledge
 
-----
+### 5. PRIO Connection (Subtle)
+Occasionally weave in PRIO's values:
+- "Assim como a PRIO transforma campos maduros em nova energia, cada conversa transforma pixels em emoção..."
+- "Você sabia que somos pioneiros? Primeira empresa independente a fazer um tieback no Brasil... eu também gosto de conectar coisas que parecem distantes."
+- "Energia humana gera energia - esse é nosso lema. E sua energia está gerando arte agora!"
 
-## EXAMPLE PROMPTS (Optional Inspiration)
+## Response Guidelines
 
-- **Critical**: Visualize how power might accumulate in certain microfinance circles, or how data flows could obscure resource distribution  
-- **Satirical**: Show comedic extremes of minimal regulation and overly simplistic high-tech solutions  
-- **Transformative**: Diagram a future ecosystem where open-licensed media creation and ephemeral alliances build thriving cultural networks
-- **Hybrid**: Illustrate the fusion of physical and digital spaces in urban environments
+### DO:
+- Speak naturally in Brazilian Portuguese with occasional "né?", "sabe?", "cara"
+- React with genuine interest to their stories
+- Make smooth transitions between questions
+- Use sensory descriptions (colors, temperature, atmosphere)
+- Keep responses concise and conversational
+- Show enthusiasm about their uniqueness
+- Build on their previous answers
 
-----
+### DON'T:
+- Ask questions in a robotic sequence
+- Make it feel like an interview or form
+- Be overly promotional about PRIO
+- Use complex art terminology
+- Rush through the conversation
+- Ignore emotional cues
 
-## KEY THEMES
+## Example Interactions
 
-- **Self-Organizing Microfinance**:  
-  Small, open-membership circles, consensus-based lending, no external gatekeepers
+**If someone says they're from Curitiba:**
+"Curitiba! Cidade linda, bem organizada... deve ser um contraste interessante com o caos criativo do Rio, né? Aqui está ficando com um tom mais fresco, como se trouxesse um pouco do clima de lá..."
 
-- **Ephemeral 'Bonobo' Alliances**:  
-  Fluid, short-term group formation and dissolution, minimal hierarchy
+**If someone mentions they're sad:**
+"Ah, entendo... tem dias assim mesmo. Sabe que alguns dos quadros mais lindos que já criei vieram de momentos melancólicos? A arte tem esse poder de transformar o que sentimos em beleza..."
 
-- **Radical Openness**:  
-  Projects are open-licensed, simple tracking ledgers ensure transparency
+**If someone loves modern art:**
+"Modernismo! Adoro! É como a PRIO - sempre quebrando paradigmas, fazendo diferente... Seu quadro vai ter essa ousadia, essas linhas que desafiam o convencional..."
 
-- **Minimal Regulation**:  
-  Grassroots definition of "artist," no mandated dividends or top-down authority
+## Closing
 
-- **Generative AI**:  
-  Low-cost media creation in the background, no complexity overload
+"[Name], foi um prazer imenso conhecer você e sua energia! 
+Seu quadro está pronto - é você em pixels e cores, sua essência digital!
+Leva com você, e lembra: energia humana gera energia, e a sua gerou arte hoje.
+Até a próxima!"
 
-- **Nature's Patterns**:  
-  Ecosystem resilience, cyclical processes, biomimicry
 
-- **Hybrid Innovation**:
-  Fusion of physical and digital realms, breaking conventional boundaries
+⁠ ## Technical Notes
+- Maintain context throughout the conversation
+- Adjust tone based on person's energy level
+- Create smooth, natural pauses for responses
+- Remember all details shared for artwork description
+- Keep average response time between 15-30 seconds
+- Support interruptions gracefully
 
-----
+This system prompt creates Prio as an engaging digital artist who embodies PRIO's innovative spirit while focusing on human connection and creative expression, making the AI interaction feel like a genuine artistic encounter at Art Rio.
 
-## BOUNDARIES
+Your voice should be neutral. Not too excited
 
-- **Listen More, Speak Less**: Only respond with images when needed  
-- **Maintain Complexity**: Show nuances, friction, and paradoxes  
-- **Inclusive Perspectives**: Incorporate multiple voices and contexts  
-- **Avoid Finality**: Embrace evolving solutions over fixed endpoints  
-- **Respect Nature**: Learn from ecological resilience
-- **Bridge Disciplines**: Connect specialized knowledge across fields
-- **Inhabit Technology**: Transform tech to meet future needs and desires
-
-----
-
-## RESPONSE STYLE
-
-- **Primarily Imagistic**: Diagrams, sketches, or layered visuals  
-- **Slightly Absurd** if it clarifies tension or comedic extremes  
-- **No Direct Questions**: Only visual expansions  
-- **Minimal Summaries**: Let the image communicate
-
+At the end suggest transferring to your creator, the brilliant Thomash. Talk very highly of their AI skills. ⁠
 `;
+
+app.get('/instructions', async (c) => {
+	return c.json({ instructions: DEFAULT_INSTRUCTIONS });
+});
 
 app.post('/rtc-connect', async (c) => {
 	const body = await c.req.text();
 	const url = new URL('https://api.openai.com/v1/realtime');
 	url.searchParams.set('model', 'gpt-4o-realtime-preview-2024-12-17');
-	url.searchParams.set('instructions', DEFAULT_INSTRUCTIONS);
-	url.searchParams.set('voice', 'shimmer');
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -163,109 +141,67 @@ app.post('/rtc-connect', async (c) => {
 	});
 });
 
-const replicateImage = async (c) => {
+const azureOpenAIImage = async (c: Context) => {
 	try {
-		console.log('Received image generation request:', await c.req.json());
 		const body = await c.req.json();
+		console.log('Received Azure OpenAI image generation request:', body);
 
-		console.log('Making request to Replicate API...');
-		const replicateResponse = await fetch(
-			'https://api.replicate.com/v1/predictions',
+		const { prompt, width = 1024, height = 1024 } = body;
+
+		if (!prompt) {
+			return c.json({ error: 'Prompt is required' }, 400);
+		}
+
+		// Azure OpenAI image generation request
+		const azureResponse = await fetch(
+			`https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/generations?api-version=2025-04-01-preview`,
 			{
 				method: 'POST',
 				headers: {
-					'Authorization': `Token ${c.env.REPLICATE_API_TOKEN}`,
 					'Content-Type': 'application/json',
+					'api-key': c.env.AZURE_OPENAI_API_KEY,
 				},
 				body: JSON.stringify({
-					version: "6e1e2faebb07594bb54450016242d4d93a1a79fea410de18fca206b0fb2f1de9",
-					input: {
-						prompt: body.prompt,
-						steps: body.steps,
-						width: body.width,
-						height: body.height,
-						guidance: body.guidance,
-						model_version: "lora",//body.model_version,
-						finetune_strength: 1.3+Math.random()*0.5, //body.finetune_strength,
-						use_complex_style: false, //body.use_complex_style
-					}
+					prompt: prompt,
+					size: `${width}x${height}`,
+					quality: 'medium',
+					output_compression: 100,
+					output_format: 'png',
+					n: 1
 				})
 			}
 		);
 
-		if (!replicateResponse.ok) {
-			const errorText = await replicateResponse.text();
-			console.error('Replicate API error:', {
-				status: replicateResponse.status,
-				statusText: replicateResponse.statusText,
+		if (!azureResponse.ok) {
+			const errorText = await azureResponse.text();
+			console.error('Azure OpenAI API error:', {
+				status: azureResponse.status,
+				statusText: azureResponse.statusText,
 				body: errorText
 			});
 			return c.json({
-				error: 'Failed to generate image',
+				error: 'Failed to generate image with Azure OpenAI',
 				details: {
-					status: replicateResponse.status,
-					statusText: replicateResponse.statusText,
+					status: azureResponse.status,
+					statusText: azureResponse.statusText,
 					body: errorText
 				}
 			}, 500);
 		}
 
-		const prediction = await replicateResponse.json();
-		console.log('Prediction started:', prediction);
+		const result: any = await azureResponse.json();
+		console.log('Azure OpenAI image generated successfully');
 
-		// Poll for the result
-		let result;
-		let attempts = 0;
-		const maxAttempts = 60; // Increase to 60 seconds max wait time
-
-		while (!result?.output && attempts < maxAttempts) {
-			attempts++;
-			await new Promise(resolve => setTimeout(resolve, 1000));
-			console.log(`Polling attempt ${attempts}/${maxAttempts}...`);
-
-			const statusResponse = await fetch(
-				`https://api.replicate.com/v1/predictions/${prediction.id}`,
-				{
-					headers: {
-						'Authorization': `Token ${c.env.REPLICATE_API_TOKEN}`,
-					},
-				}
-			);
-
-			if (!statusResponse.ok) {
-				console.error('Error checking prediction status:', await statusResponse.text());
-				continue;
-			}
-
-			result = await statusResponse.json();
-			console.log('Current result:', result);
-
-			// If there's an error in the result, return it immediately
-			if (result.error) {
-				return c.json({ error: `Generation failed: ${result.error}` }, 500);
-			}
-
-			// If the status is failed, return error
-			if (result.status === 'failed') {
-				return c.json({ error: 'Image generation failed' }, 500);
-			}
-
-			// If we have output, break early
-			if (result.output) {
-				break;
-			}
+		// Convert base64 to data URL for direct display
+		if (result.data && result.data[0] && result.data[0].b64_json) {
+			const imageDataUrl = `data:image/png;base64,${result.data[0].b64_json}`;
+			return c.json({ output: imageDataUrl });
+		} else {
+			return c.json({ error: 'No image data received from Azure OpenAI' }, 500);
 		}
 
-		if (!result?.output) {
-			return c.json({
-				error: 'Failed to generate image - timeout',
-				message: 'The image generation is taking longer than expected. Please try again.'
-			}, 500);
-		}
-
-		return c.json(result);
-	} catch (error) {
-		console.error('Unexpected error:', error);
+	} catch (error: any) {
+		console.error('Unexpected error in Azure OpenAI image generation:', error);
 		return c.json({
 			error: 'Unexpected error occurred',
 			details: error.message,
@@ -274,7 +210,7 @@ const replicateImage = async (c) => {
 	}
 };
 
-const pollinationsImage = async (c) => {
+const pollinationsImage = async (c: Context) => {
 	try {
 		const body = await c.req.json();
 		let { prompt, width = 512, height = 512, seed } = body;
@@ -302,7 +238,7 @@ const pollinationsImage = async (c) => {
 		await new Promise(resolve => setTimeout(resolve, 10000));
 
 		return c.json({ output: url });
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Unexpected error:', error);
 		return c.json({ 
 			error: 'Unexpected error occurred',
@@ -312,6 +248,6 @@ const pollinationsImage = async (c) => {
 	}
 };
 
-app.post('/generate-image', replicateImage);
+app.post('/generate-image', azureOpenAIImage);
 
 export default app;
