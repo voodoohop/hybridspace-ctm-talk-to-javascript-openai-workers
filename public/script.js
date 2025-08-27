@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					{
 						type: 'function',
 						name: 'generateImage',
-						description: 'Generate an image using Azure OpenAI DALL-E',
+						description: 'Generate an image using Azure OpenAI GPT-image-1',
 						parameters: {
 							type: 'object',
 							properties: {

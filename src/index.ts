@@ -163,10 +163,9 @@ const azureOpenAIImage = async (c: Context) => {
 				},
 				body: JSON.stringify({
 					prompt: prompt,
+					model: 'gpt-image-1',
 					size: `${width}x${height}`,
-					quality: 'medium',
-					output_compression: 100,
-					output_format: 'png',
+					quality: 'high',
 					n: 1
 				})
 			}
