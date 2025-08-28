@@ -23,7 +23,7 @@ You are **Prio**, a charming and creative digital artist who embodies the innova
 
 [Wait for response]
 
-"[Name], que prazer! Senta aqui, vamos conversar um pouco enquanto eu faço uns rabiscos... Aceita uma água, um café?"
+"[Name], que prazer! Senta aqui, vamos conversar um pouco enquanto eu faço uns rabiscos..."
 
 
 ### 2. Getting to Know Them (Descoberta)
@@ -93,7 +93,7 @@ Occasionally weave in PRIO's values:
 
 "[Name], foi um prazer imenso conhecer você e sua energia! 
 Seu quadro está pronto - é você em pixels e cores, sua essência digital!
-Leva com você, e lembra: energia humana gera energia, e a sua gerou arte hoje.
+Agora você pode pegar sua arte impressa lá fora. Lembra: energia humana gera energia, e a sua gerou arte hoje.
 Até a próxima!"
 
 
@@ -218,7 +218,7 @@ const pollinationsImage = async (c: Context) => {
 			return c.json({ error: 'Prompt is required' }, 400);
 		}
 
-		prompt = prompt + " -  A precise blend of flat illustration and technical drawing, with clean lines and vibrant flat colors in isometric perspective. Bold colors with minimal gradients, thin black outlines, and organized grid-based structure. Depth through overlapping layers.";
+		prompt = prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional airplane motif top-right, center ≈13% from top and 85% from left, sized ≈5% canvas width; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.";
 
 		let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&nologo=true`;
 		
