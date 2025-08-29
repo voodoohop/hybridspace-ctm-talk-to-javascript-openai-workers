@@ -1,4 +1,4 @@
-// Initialize containers and load history when DOM is ready
+// Initialize containers when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
 	// Create containers
 	const imageContainer = document.createElement('div');
@@ -16,50 +16,80 @@ document.addEventListener('DOMContentLoaded', () => {
 	chatContainer.style.margin = '0 auto';
 	document.body.insertBefore(chatContainer, imageContainer);
 
-	// Add mute toggle button
-	const muteContainer = document.createElement('div');
-	muteContainer.style.position = 'fixed';
-	muteContainer.style.top = '20px';
-	muteContainer.style.right = '20px';
-	muteContainer.style.zIndex = '1000';
-	document.body.appendChild(muteContainer);
+	// Camera state - open at page load
+	let cameraStream = null;
+	let videoElement = null;
 
-	const muteButton = document.createElement('button');
-	muteButton.innerHTML = '🎤 Mute';
-	muteButton.style.padding = '10px 20px';
-	muteButton.style.fontSize = '16px';
-	muteButton.style.borderRadius = '5px';
-	muteButton.style.border = '1px solid #ccc';
-	muteButton.style.backgroundColor = '#fff';
-	muteButton.style.cursor = 'pointer';
-	muteContainer.appendChild(muteButton);
-
-	let isMuted = false;
-	let audioContext;
-	let mediaStreamSource;
-
-	// Storage configuration
-	const STORAGE_KEYS = {
-		IMAGES: 'generatedImages6',
-		CHAT: 'chatHistory6'
-	};
-
-	// Load saved images from localStorage
-	function loadSavedImages() {
+	// Open camera immediately when page loads
+	async function initializeCamera() {
 		try {
-			const savedImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMAGES) || '[]');
-			savedImages.forEach(({ url, prompt, timestamp }) => {
-				addImageToPage(url, prompt, timestamp);
+			cameraStream = await navigator.mediaDevices.getUserMedia({ 
+				video: { facingMode: 'user', width: 1280, height: 720 } 
 			});
-			// Scroll to the bottom after loading images
-			window.scrollTo(0, document.body.scrollHeight);
+			
+			videoElement = document.createElement('video');
+			videoElement.srcObject = cameraStream;
+			videoElement.autoplay = true;
+			videoElement.muted = true;
+			videoElement.style.width = '300px';
+			videoElement.style.height = '225px';
+			videoElement.style.borderRadius = '8px';
+			videoElement.style.position = 'fixed';
+			videoElement.style.top = '20px';
+			videoElement.style.left = '20px';
+			videoElement.style.zIndex = '999';
+			videoElement.style.border = '2px solid #FFD400';
+			
+			document.body.appendChild(videoElement);
+			console.log('Camera initialized successfully');
 		} catch (error) {
-			console.error('Error loading saved images:', error);
+			console.warn('Camera initialization failed:', error);
 		}
 	}
 
-	// Add image to page and optionally save to localStorage
-	function addImageToPage(url, prompt, timestamp = new Date().toISOString()) {
+	// Initialize camera
+	initializeCamera();
+
+	// Add test button for generateImage function
+	const testButton = document.createElement('button');
+	testButton.innerHTML = '🎨 Test Generate Image';
+	testButton.style.position = 'fixed';
+	testButton.style.top = '20px';
+	testButton.style.right = '20px';
+	testButton.style.padding = '10px 20px';
+	testButton.style.fontSize = '16px';
+	testButton.style.borderRadius = '5px';
+	testButton.style.border = '1px solid #ccc';
+	testButton.style.backgroundColor = '#fff';
+	testButton.style.cursor = 'pointer';
+	testButton.style.zIndex = '1000';
+	document.body.appendChild(testButton);
+
+	testButton.addEventListener('click', async () => {
+		try {
+			testButton.disabled = true;
+			testButton.innerHTML = '🎨 Generating...';
+			testButton.style.backgroundColor = '#f0f0f0';
+			
+			await fns.generateImage({
+				prompt: 'A beautiful digital artwork of Rio de Janeiro with Sugarloaf mountain in the background, vibrant colors, artistic style',
+				width: 1024,
+				height: 1024
+			});
+		} catch (error) {
+			console.error('Test generation failed:', error);
+			alert('Test generation failed: ' + error.message);
+		} finally {
+			testButton.disabled = false;
+			testButton.innerHTML = '🎨 Test Generate Image';
+			testButton.style.backgroundColor = '#fff';
+		}
+	});
+
+
+
+	// Add image to page
+	function addImageToPage(url, prompt = '') {
 		const imgWrapper = document.createElement('div');
 		imgWrapper.style.marginBottom = '30px';
 		imgWrapper.style.maxWidth = '800px';
@@ -96,14 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		const truncatedPrompt = prompt.length > 200 ? prompt.substring(0, 200) + '...' : prompt;
 		promptText.textContent = `Prompt: ${truncatedPrompt}`;
 		
-		const dateText = document.createElement('div');
-		dateText.style.fontSize = '12px';
-		dateText.style.color = '#999';
-		dateText.textContent = new Date(timestamp).toLocaleString();
-		
 		imgWrapper.appendChild(img);
 		imgWrapper.appendChild(promptText);
-		imgWrapper.appendChild(dateText);
 		imageContainer.appendChild(imgWrapper);
 		
 		// Initial scroll attempt (in case image is cached)
@@ -115,49 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		return imgWrapper;
 	}
 
-	// Save image to localStorage
-	function saveImageToStorage(url, prompt) {
-		try {
-			const savedImages = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMAGES) || '[]');
-			const timestamp = new Date().toISOString();
-			savedImages.push({ url, prompt, timestamp });
-			localStorage.setItem(STORAGE_KEYS.IMAGES, JSON.stringify(savedImages));
-		} catch (error) {
-			console.error('Error saving image to localStorage:', error);
-		}
-	}
 
-	// Chat history functions
-	function loadChatHistory() {
-		try {
-			const chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT) || '[]');
-			chatHistory.forEach(message => {
-				addMessageToChat(message.role, message.content, message.timestamp, false);
-			});
-			// Scroll to the bottom after loading chat
-			window.scrollTo(0, document.body.scrollHeight);
-		} catch (error) {
-			console.error('Error loading chat history:', error);
-		}
-	}
-
-	function saveChatMessage(role, content) {
-		try {
-			const chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT) || '[]');
-			const message = {
-				role,
-				content,
-				timestamp: new Date().toISOString()
-			};
-			chatHistory.push(message);
-			localStorage.setItem(STORAGE_KEYS.CHAT, JSON.stringify(chatHistory));
-			addMessageToChat(role, content, message.timestamp);
-		} catch (error) {
-			console.error('Error saving chat message:', error);
-		}
-	}
-
-	function addMessageToChat(role, content, timestamp, shouldScroll = true) {
+	function addMessageToChat(role, content, shouldScroll = true) {
 		const messageDiv = document.createElement('div');
 		messageDiv.style.marginBottom = '15px';
 		messageDiv.style.padding = '10px';
@@ -174,15 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		const contentDiv = document.createElement('div');
 		contentDiv.textContent = content;
-		contentDiv.style.marginBottom = '5px';
-		
-		const timeDiv = document.createElement('div');
-		timeDiv.textContent = new Date(timestamp).toLocaleString();
-		timeDiv.style.fontSize = '12px';
-		timeDiv.style.color = '#999';
 		
 		messageDiv.appendChild(contentDiv);
-		messageDiv.appendChild(timeDiv);
 		chatContainer.appendChild(messageDiv);
 		
 		if (shouldScroll) {
@@ -208,72 +184,90 @@ document.addEventListener('DOMContentLoaded', () => {
 		return promptElement;
 	}
 
+
 	const fns = {
 		getPageHTML: () => {
 			return { success: true, html: document.documentElement.outerHTML };
 		},
-		changeBackgroundColor: ({ color }) => {
-			document.body.style.backgroundColor = color;
-			return { success: true, color };
-		},
-		changeTextColor: ({ color }) => {
-			document.body.style.color = color;
-			return { success: true, color };
-		},
-		generateImage: async ({ prompt, // required
-			width = 1024, 
-			height = 1024
-		}) => {
+		generateImage: async ({ prompt, width = 1024, height = 1024 }) => {
 			if (!prompt) {
 				throw new Error('prompt is required for image generation');
 			}
 			const promptElement = addPromptToPage(prompt);
+			
 			try {
-				console.log('Sending Azure OpenAI image generation request with params:', {
-					prompt, width, height
-				});
-				
-				const response = await fetch('/generate-image', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						prompt,
-						width,
-						height
-					})
-				});
-				
-				const result = await response.json();
-				
-				if (!response.ok) {
-					console.error('Image generation failed:', result);
-					const errorMessage = result.message || result.error || 'Unknown error occurred';
-					throw new Error(`Failed to generate image: ${errorMessage}`);
+				// Capture photo from already-open camera
+				let photoBlob = null;
+				if (videoElement && cameraStream) {
+					const canvas = document.createElement('canvas');
+					canvas.width = videoElement.videoWidth;
+					canvas.height = videoElement.videoHeight;
+					const ctx = canvas.getContext('2d');
+					ctx.drawImage(videoElement, 0, 0);
+					
+					photoBlob = await new Promise(resolve => {
+						canvas.toBlob(resolve, 'image/jpeg', 0.8);
+					});
 				}
 				
-				console.log('Azure OpenAI image generated successfully:', result);
-				
-				if (!result.output) {
-					throw new Error('No output URL received from the image generation service');
-				}
-
-				// After successful image generation, remove the temporary prompt element
-				promptElement.remove();
-				const imageUrl = result.output;
-				addImageToPage(imageUrl, prompt);
-				saveImageToStorage(imageUrl, prompt);
-				
-				// Scroll to the bottom after adding the new image
-				window.scrollTo({
-					top: document.body.scrollHeight,
-					behavior: 'smooth'
+				console.log('Sending image generation request with params:', {
+					prompt, width, height, hasPhoto: !!photoBlob
 				});
+				
+				// Use photo edit API if we have a photo, otherwise regular generation
+				if (photoBlob) {
+					const formData = new FormData();
+					formData.append('image', photoBlob, 'photo.jpg');
+					formData.append('prompt', prompt);
+					formData.append('size', '1024x1536');
+					
+					const response = await fetch('/edit-image', {
+						method: 'POST',
+						body: formData
+					});
+					
+					const result = await response.json();
+					
+					if (!response.ok) {
+						throw new Error(result.error || 'Failed to generate personalized image');
+					}
+					
+					promptElement.remove();
+					addImageToPage(result.output, prompt);
+					return { success: true, output: result.output };
+				} else {
+					// Fallback to regular image generation
+					const response = await fetch('/generate-image', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({
+							prompt,
+							width,
+							height
+						})
+					});
+					
+					const result = await response.json();
+					
+					if (!response.ok) {
+						console.error('Image generation failed:', result);
+						const errorMessage = result.message || result.error || 'Unknown error occurred';
+						throw new Error(`Failed to generate image: ${errorMessage}`);
+					}
+					
+					if (!result.output) {
+						throw new Error('No output URL received from the image generation service');
+					}
 
-				return { success: true, imageUrl };
+					promptElement.remove();
+					addImageToPage(result.output, prompt);
+					return { success: true, output: result.output };
+				}
 			} catch (error) {
 				console.error('Error in generateImage:', error);
+				promptElement.remove();
 				throw error;
 			}
 		}
@@ -312,36 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				voice: 'ash',
 				modalities: ['text', 'audio'],
 				tools: [
-					{
-						type: 'function',
-						name: 'changeBackgroundColor',
-						description: 'Change the background color of the page',
-						parameters: {
-							type: 'object',
-							properties: {
-								color: {
-									type: 'string',
-									description: 'The color to change the background to',
-								},
-							},
-							required: ['color'],
-						},
-					},
-					{
-						type: 'function',
-						name: 'changeTextColor',
-						description: 'Change the text color of the page',
-						parameters: {
-							type: 'object',
-							properties: {
-								color: {
-									type: 'string',
-									description: 'The color to change the text to',
-								},
-							},
-							required: ['color'],
-						},
-					},
 					{
 						type: 'function',
 						name: 'generateImage',
@@ -414,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			} 
 			// Handle chat messages
 			else if (msg.content) {
-				saveChatMessage('assistant', msg.content);
+				addMessageToChat('assistant', msg.content);
 			}
 		} catch (error) {
 			console.error('Error processing message:', error);
@@ -426,8 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (event.key === 'Enter' && !event.shiftKey && document.activeElement.tagName === 'TEXTAREA') {
 			const content = document.activeElement.value.trim();
 			if (content) {
-				// Save the user message
-				saveChatMessage('user', content);
+				// Add the user message
+				addMessageToChat('user', content);
 				// Clear the textarea
 				document.activeElement.value = '';
 			}
@@ -461,21 +425,5 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	});
 
-	// Add mute toggle functionality
-	muteButton.addEventListener('click', () => {
-		isMuted = !isMuted;
-		muteButton.innerHTML = isMuted ? '🔇 Unmute' : '🎤 Mute';
-		muteButton.style.backgroundColor = isMuted ? '#ffebee' : '#fff';
-		
-		// Add visual feedback when muted
-		if (isMuted) {
-			addMessageToChat('system', 'Microphone muted - OpenAI will not receive audio until unmuted');
-		} else {
-			addMessageToChat('system', 'Microphone unmuted - OpenAI will now receive audio');
-		}
-	});
 
-	// Load both chat and images
-	loadChatHistory();
-	loadSavedImages();
 });

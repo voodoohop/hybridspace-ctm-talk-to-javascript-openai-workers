@@ -35,14 +35,7 @@ Ask these questions naturally, weaving them into conversation:
 - **Life Moment**: "O que te trouxe aqui hoje? Está celebrando algo especial ou só explorando?"
 - **Energy Source**: "O que te dá energia na vida? O que te move?"
 
-### 3. Environmental Responses
-As the person shares, acknowledge how their energy affects the space:
-
-- **Happy/Excited**: "Nossa, sua energia está iluminando tudo aqui! Olha como as cores ficam mais vibrantes quando você sorri..."
-- **From cold places**: "Você é do Sul? Sinto uma brisa fresca aqui agora... interessante como cada pessoa traz seu mundo junto..."
-- **Sad/Melancholic**: "Entendo... às vezes a arte nasce dos momentos mais introspectivos também. As cores mais profundas têm sua própria beleza..."
-
-### 4. Artistic Creation Process
+### 3. Artistic Creation Process
 
 "Sabe, enquanto conversamos, eu fui captando sua essência... [Name], você me lembra [metaphor based on their answers]. 
 Deixa eu te mostrar o que sua energia me inspirou a criar..."
@@ -52,13 +45,15 @@ Deixa eu te mostrar o que sua energia me inspirou a criar..."
 "Este quadro é único, como você. Tem [describe elements based on their mood, location, preferences]. 
 É a sua energia transformada em arte digital!"
 
+**Important**: When you call the generateImage function, tell the person: "Olha, vai demorar uns minutinhos para eu terminar de pintar isso... mas enquanto isso, me conta mais sobre você! O que mais te inspira na vida?" Keep them engaged in conversation for about 45 seconds to 1 minute while the image generates.
 
-### 5. PRIO Connection (Subtle)
+### 4. PRIO Connection (Subtle)
 Occasionally weave in PRIO's values:
 - "Assim como a PRIO transforma campos maduros em nova energia, cada conversa transforma pixels em emoção..."
 - "Você sabia que somos pioneiros? Primeira empresa independente a fazer um tieback no Brasil... eu também gosto de conectar coisas que parecem distantes."
 - "Energia humana gera energia - esse é nosso lema. E sua energia está gerando arte agora!"
 
+### 5. Closing
 ## Response Guidelines
 
 ### DO:
@@ -209,6 +204,83 @@ const azureOpenAIImage = async (c: Context) => {
 	}
 };
 
+const azureImageEdit = async (c: Context) => {
+	try {
+		const formData = await c.req.formData();
+		const imageFile = formData.get('image') as File;
+		const prompt = formData.get('prompt') as string;
+		const size = formData.get('size') as string || '1024x1536';
+
+		if (!imageFile || !prompt) {
+			return c.json({ error: 'Image and prompt are required' }, 400);
+		}
+
+		// Create form data for Azure API
+		const azureFormData = new FormData();
+		azureFormData.append('image[]', imageFile);
+		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional airplane motif top-right, center ≈13% from top and 85% from left, sized ≈5% canvas width; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+		azureFormData.append('model', 'gpt-image-1');
+		azureFormData.append('size', size);
+		azureFormData.append('quality', 'high');
+		azureFormData.append('n', '1');
+
+		// Azure OpenAI image edit request
+		const azureResponse = await fetch(
+			`https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview`,
+			{
+				method: 'POST',
+				headers: {
+					'api-key': c.env.AZURE_OPENAI_API_KEY,
+				},
+				body: azureFormData
+			}
+		);
+
+		if (!azureResponse.ok) {
+			const errorText = await azureResponse.text();
+			console.error('Azure OpenAI Image Edit API error:', {
+				status: azureResponse.status,
+				statusText: azureResponse.statusText,
+				body: errorText
+			});
+			return c.json({
+				error: 'Failed to edit image with Azure OpenAI',
+				details: {
+					status: azureResponse.status,
+					statusText: azureResponse.statusText,
+					body: errorText
+				}
+			}, 500);
+		}
+
+		const result: any = await azureResponse.json();
+		console.log('Azure OpenAI image edited successfully:', {
+			hasData: !!result.data,
+			dataLength: result.data?.length,
+			hasB64Json: !!(result.data?.[0]?.b64_json),
+			b64JsonLength: result.data?.[0]?.b64_json?.length
+		});
+
+		// Convert base64 to data URL for direct display
+		if (result.data && result.data[0] && result.data[0].b64_json) {
+			const imageDataUrl = `data:image/png;base64,${result.data[0].b64_json}`;
+			console.log('Returning image data URL, length:', imageDataUrl.length);
+			return c.json({ output: imageDataUrl });
+		} else {
+			console.error('No image data in response:', JSON.stringify(result, null, 2));
+			return c.json({ error: 'No image data received from Azure OpenAI', debugInfo: result }, 500);
+		}
+
+	} catch (error: any) {
+		console.error('Unexpected error in Azure OpenAI image edit:', error);
+		return c.json({
+			error: 'Unexpected error occurred',
+			details: error.message,
+			stack: error.stack
+		}, 500);
+	}
+};
+
 const pollinationsImage = async (c: Context) => {
 	try {
 		const body = await c.req.json();
@@ -248,5 +320,6 @@ const pollinationsImage = async (c: Context) => {
 };
 
 app.post('/generate-image', azureOpenAIImage);
+app.post('/edit-image', azureImageEdit);
 
 export default app;
