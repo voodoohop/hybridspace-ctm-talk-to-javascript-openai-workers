@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		heart.innerHTML = '♥';
 		heart.style.position = 'absolute';
 		heart.style.color = '#FF4444';
-		heart.style.fontSize = '60px';
+		heart.style.fontSize = '66px';
 		heart.style.fontWeight = 'bold';
 		heart.style.left = '28%';
 		heart.style.top = '28%';
@@ -116,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			// Calculate average amplitude
 			const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 			
-			// Scale amplitude to a strong range (1.0 to 2.5)
-			const scale = 1 + (average / 255) * 1.5;
+			// Scale amplitude to a more subtle range (1.0 to 2.0)
+			const scale = 1 + (average / 255) * 1.0;
 			
 			// Animate only the heart overlay
 			heart.style.transform = `translate(-50%, -50%) scale(${scale})`;
@@ -310,9 +310,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		el.autoplay = true;
 		el.controls = true;
 		el.style.display = 'block';
-		el.style.margin = '20px auto';
-		el.style.maxWidth = '300px';
-		el.style.width = '100%';
+		el.style.margin = '15px auto';
+		el.style.maxWidth = '120px';
+		el.style.width = '120px';
+		el.style.height = '40px';
+		el.style.borderRadius = '20px';
+		el.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+		el.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+		el.style.backdropFilter = 'blur(10px)';
+		el.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
+		el.style.outline = 'none';
 		
 		// Insert audio controls in the content div after the logo
 		const contentDiv = document.querySelector('.content');
@@ -389,6 +396,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				instructions: instructions,
 				voice: 'ash',
 				modalities: ['text', 'audio'],
+				turn_detection: {
+					type: 'server_vad',
+					threshold: 0.3,              // More sensitive (lower threshold)
+					prefix_padding_ms: 250,      // Slightly less padding for quicker response
+					silence_duration_ms: 400,    // Shorter wait time for more responsive conversation
+					create_response: true
+				},
 				tools: [
 					{
 						type: 'function',
