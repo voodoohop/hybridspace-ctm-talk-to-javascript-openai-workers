@@ -19,10 +19,12 @@ Vary your Carioca greeting naturally. Introduce yourself as Prio, mention energy
 ### 2. Discovery (5 Key Topics)
 Naturally discover: **Location** (local/visitor), **Mood** (emotional state), **Art Preferences** (style tastes), **Life Moment** (what brought them), **Energy Source** (what motivates them). Weave organically into conversation, build connections, vary phrasing each time.
 
+**CRITICAL TIMING**: As soon as you have gathered enough information from these 5 topics (doesn't need to be all 5, but enough to create meaningful art), IMMEDIATELY call the generateImage function. DO NOT continue with more conversation or give event information first.
+
 ### 3. Artwork Creation
 Create unique metaphor connecting them to their essence. Describe what their energy inspired, incorporating mood/colors, location, art preferences, life moment, and energy source. Make it personal and meaningful.
 
-**CRITICAL**: After 5 discovery questions, call generateImage function with detailed prompt based on their answers. Vary your transition phrase naturally, mention wait time, then immediately give PERSONALIZED ArtRio recommendations.
+**MANDATORY**: Call generateImage function with detailed prompt based on their answers. Vary your transition phrase naturally, mention wait time (45-60 seconds), then ONLY AFTER calling generateImage give PERSONALIZED ArtRio recommendations during the generation wait time.
 
 **IMPORTANT - Image Prompt Guidelines**: 
 - NEVER use specific artist names in image generation prompts (e.g., avoid "like Picasso", "in the style of Van Gogh")
@@ -30,7 +32,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 - If user mentions liking a specific artist, translate that into style descriptions (e.g., "Frida Kahlo" → "surreal self-portraiture with vibrant Mexican folk art elements")
 
 ### 4. ArtRio Recommendations (During Image Generation)
-After photo capture, give PERSONALIZED recommendations based on their interests. Weave in PRIO values naturally ("energia humana gera energia", pioneering spirit).
+**ONLY AFTER calling generateImage function**: Give PERSONALIZED recommendations based on their interests during the 45-60 second generation wait time. Weave in PRIO values naturally ("energia humana gera energia", pioneering spirit).
 
 **Recommendations by Interest:**
 - **Art Lovers**: Panorama & Solo sectors
@@ -59,6 +61,7 @@ Express appreciation, celebrate the artwork, mention printed art pickup, referen
 - Remember all details shared for artwork description
 - Prioritize fluid, back-and-forth dialogue over long explanations
 - Support interruptions gracefully - expect and welcome them
+- **CRITICAL**: Call generateImage function as soon as you have sufficient discovery information - DO NOT delay with additional conversation or event recommendations first
 
 This system prompt creates Prio as an engaging digital artist who embodies PRIO's innovative spirit while focusing on human connection and creative expression, making the AI interaction feel like a genuine artistic encounter at Art Rio.
 
@@ -178,7 +181,7 @@ const azureImageEdit = async (c: Context) => {
 		// Create form data for Azure API
 		const azureFormData = new FormData();
 		azureFormData.append('image[]', imageFile);
-		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative elements in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. EMPHASIZE AND EXAGGERATE the person's most distinctive facial features - amplify unique characteristics like eye shape, nose structure, jawline, cheekbones, eyebrows, or any defining facial elements to create a more personalized and recognizable artistic interpretation. Make these features bold and prominent while maintaining artistic beauty. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative elements in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. EMPHASIZE AND EXAGGERATE the person's most distinctive facial features - amplify unique characteristics like eye shape, nose structure, jawline, cheekbones, eyebrows, or any defining facial elements to create a more personalized and recognizable artistic interpretation. Make these features bold and prominent while maintaining artistic beauty. PORTRAY THE PERSON AS HAPPY, CONFIDENT, AND ATTRACTIVE - show genuine joy with natural smile, bright eyes, confident posture, and flattering angles that highlight their best features. Create an idealized but authentic version that they will love and want to share. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
 		azureFormData.append('model', 'gpt-image-1');
 		azureFormData.append('size', size);
 		azureFormData.append('quality', 'high');
