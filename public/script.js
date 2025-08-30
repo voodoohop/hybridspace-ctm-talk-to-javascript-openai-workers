@@ -8,13 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	imageContainer.style.margin = '0 auto';
 	document.body.appendChild(imageContainer);
 
-	const chatContainer = document.createElement('div');
-	chatContainer.id = 'chat-container';
-	chatContainer.style.padding = '20px';
-	chatContainer.style.marginBottom = '20px';
-	chatContainer.style.maxWidth = '800px';
-	chatContainer.style.margin = '0 auto';
-	document.body.insertBefore(chatContainer, imageContainer);
 
 	// Camera state - open at page load
 	let cameraStream = null;
@@ -96,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		heart.style.fontSize = '60px';
 		heart.style.fontWeight = 'bold';
 		heart.style.left = '28%';
-		heart.style.top = '32%';
+		heart.style.top = '28%';
 		heart.style.transform = 'translate(-50%, -50%)';
 		heart.style.transformOrigin = 'center';
 		heart.style.pointerEvents = 'none';
@@ -144,9 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	function addImageToPage(url, prompt = '') {
 		// Hide all other elements
 		const contentDiv = document.querySelector('.content');
-		const chatContainer = document.getElementById('chat-container');
 		if (contentDiv) contentDiv.style.display = 'none';
-		if (chatContainer) chatContainer.style.display = 'none';
 		
 		// Create fullscreen image container
 		const fullscreenContainer = document.createElement('div');
@@ -163,17 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		fullscreenContainer.style.justifyContent = 'center';
 		fullscreenContainer.style.zIndex = '2000';
 		
-		// Add audio controls at top
-		const audioControls = document.querySelector('audio');
-		if (audioControls) {
-			const controlsClone = audioControls.cloneNode(true);
-			controlsClone.style.position = 'absolute';
-			controlsClone.style.top = '20px';
-			controlsClone.style.left = '50%';
-			controlsClone.style.transform = 'translateX(-50%)';
-			controlsClone.style.zIndex = '2001';
-			fullscreenContainer.appendChild(controlsClone);
-		}
 		
 		// Create image element
 		const img = document.createElement('img');
@@ -189,17 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
 		img.style.height = 'auto';
 		img.style.objectFit = 'contain';
 		
-		// Create prompt text underneath controls
+		// Create prompt text underneath image
 		const promptText = document.createElement('div');
-		promptText.style.position = 'absolute';
-		promptText.style.top = '60px';
-		promptText.style.left = '50%';
-		promptText.style.transform = 'translateX(-50%)';
 		promptText.style.fontSize = '18px';
 		promptText.style.color = '#fff';
 		promptText.style.textAlign = 'center';
 		promptText.style.maxWidth = '80vw';
-		promptText.style.zIndex = '2001';
+		promptText.style.marginTop = '20px';
+		promptText.style.opacity = '0.8';
 		const truncatedPrompt = prompt.length > 150 ? prompt.substring(0, 150) + '...' : prompt;
 		promptText.textContent = truncatedPrompt;
 		
@@ -211,31 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 
-	function addMessageToChat(role, content, shouldScroll = true) {
-		const messageDiv = document.createElement('div');
-		messageDiv.style.marginBottom = '15px';
-		messageDiv.style.padding = '10px';
-		messageDiv.style.borderRadius = '8px';
-		messageDiv.style.maxWidth = '80%';
-		
-		if (role === 'user') {
-			messageDiv.style.marginLeft = 'auto';
-			messageDiv.style.backgroundColor = '#e3f2fd';
-		} else {
-			messageDiv.style.marginRight = 'auto';
-			messageDiv.style.backgroundColor = '#f5f5f5';
-		}
-		
-		const contentDiv = document.createElement('div');
-		contentDiv.textContent = content;
-		
-		messageDiv.appendChild(contentDiv);
-		chatContainer.appendChild(messageDiv);
-		
-		if (shouldScroll) {
-			window.scrollTo(0, document.body.scrollHeight);
-		}
-	}
 
 	// Add prompt to page immediately
 	function addPromptToPage(prompt) {
@@ -511,27 +463,15 @@ document.addEventListener('DOMContentLoaded', () => {
 					}
 				}
 			} 
-			// Handle chat messages
+			// Handle chat messages - no longer needed since we removed chat
 			else if (msg.content) {
-				addMessageToChat('assistant', msg.content);
+				console.log('Assistant message:', msg.content);
 			}
 		} catch (error) {
 			console.error('Error processing message:', error);
 		}
 	});
 
-	// Add event listener for user input
-	document.addEventListener('keydown', async (event) => {
-		if (event.key === 'Enter' && !event.shiftKey && document.activeElement.tagName === 'TEXTAREA') {
-			const content = document.activeElement.value.trim();
-			if (content) {
-				// Add the user message
-				addMessageToChat('user', content);
-				// Clear the textarea
-				document.activeElement.value = '';
-			}
-		}
-	});
 
 	// Capture microphone
 	navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
