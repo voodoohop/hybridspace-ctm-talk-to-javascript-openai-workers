@@ -3,4 +3,8 @@
 interface Env {
 	OPENAI_API_KEY: string;
 	REPLICATE_API_TOKEN: string;
+	AZURE_OPENAI_API_KEY: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
+	CLOUDFLARE_IMAGES_TOKEN: string;
+	CLOUDFLARE_IMAGES_URL: string;
 }

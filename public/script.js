@@ -1,3 +1,10 @@
+// Import helper functions
+import { addImageToPage, addPromptToPage, capturePhotoFromVideo, addTestButton } from './helpers.js';
+
+// Global camera state - accessible to test functions
+let cameraStream = null;
+let videoElement = null;
+
 // Initialize containers when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
 	// Create containers
@@ -7,11 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	imageContainer.style.maxWidth = '800px';
 	imageContainer.style.margin = '0 auto';
 	document.body.appendChild(imageContainer);
-
-
-	// Camera state - open at page load
-	let cameraStream = null;
-	let videoElement = null;
 
 	// Open camera immediately when page loads
 	async function initializeCamera() {
@@ -64,8 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}
 
-	// Initialize camera
-	initializeCamera();
+	// Initialize camera and set up test button after camera is ready
+	initializeCamera().then(() => {
+		// Make camera variables globally accessible for test functions
+		window.videoElement = videoElement;
+		window.cameraStream = cameraStream;
+		
+		// Make fns globally accessible for test functions
+		window.fns = fns;
+		
+		// Add test button (DELETE AFTER TESTING)
+		addTestButton();
+	});
 
 	// Heart-only animation based on audio amplitude
 	function setupLogoAnimation(audioStream) {
@@ -133,79 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-	// Add image to page in fullscreen mode
-	function addImageToPage(url, prompt = '') {
-		// Hide all other elements
-		const contentDiv = document.querySelector('.content');
-		if (contentDiv) contentDiv.style.display = 'none';
-		
-		// Create fullscreen image container
-		const fullscreenContainer = document.createElement('div');
-		fullscreenContainer.id = 'fullscreen-image-container';
-		fullscreenContainer.style.position = 'fixed';
-		fullscreenContainer.style.top = '0';
-		fullscreenContainer.style.left = '0';
-		fullscreenContainer.style.width = '100vw';
-		fullscreenContainer.style.height = '100vh';
-		fullscreenContainer.style.backgroundColor = '#000';
-		fullscreenContainer.style.display = 'flex';
-		fullscreenContainer.style.flexDirection = 'column';
-		fullscreenContainer.style.alignItems = 'center';
-		fullscreenContainer.style.justifyContent = 'center';
-		fullscreenContainer.style.zIndex = '2000';
-		
-		
-		// Create image element
-		const img = document.createElement('img');
-		img.onerror = (error) => {
-			console.error('Failed to load image:', error);
-			fullscreenContainer.innerHTML = '<div style="color: red; font-size: 24px;">Failed to load the generated image. Please try again.</div>';
-		};
-		img.src = url;
-		img.alt = `Generated image for prompt: ${prompt}`;
-		img.style.maxWidth = '90vw';
-		img.style.maxHeight = '80vh';
-		img.style.width = 'auto';
-		img.style.height = 'auto';
-		img.style.objectFit = 'contain';
-		
-		// Create prompt text underneath image
-		const promptText = document.createElement('div');
-		promptText.style.fontSize = '18px';
-		promptText.style.color = '#fff';
-		promptText.style.textAlign = 'center';
-		promptText.style.maxWidth = '80vw';
-		promptText.style.marginTop = '20px';
-		promptText.style.opacity = '0.8';
-		const truncatedPrompt = prompt.length > 150 ? prompt.substring(0, 150) + '...' : prompt;
-		promptText.textContent = truncatedPrompt;
-		
-		fullscreenContainer.appendChild(img);
-		fullscreenContainer.appendChild(promptText);
-		document.body.appendChild(fullscreenContainer);
-		
-		return fullscreenContainer;
-	}
 
 
 
-	// Add prompt to page immediately
-	function addPromptToPage(prompt) {
-		const promptElement = document.createElement('div');
-		promptElement.style.margin = '20px auto';
-		promptElement.style.maxWidth = '800px';
-		promptElement.style.padding = '20px';
-		promptElement.style.textAlign = 'center';
-		promptElement.style.fontSize = '18px';
-		promptElement.style.fontWeight = '400';
-		promptElement.style.lineHeight = '1.5';
-		promptElement.style.color = '#fff';
-		promptElement.style.opacity = '0.8';
-		promptElement.innerHTML = prompt;
-		imageContainer.appendChild(promptElement);
-		window.scrollTo(0, document.body.scrollHeight);
-		return promptElement;
-	}
 
 
 	const fns = {
@@ -222,15 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				// Capture photo from already-open camera
 				let photoBlob = null;
 				if (videoElement && cameraStream) {
-					const canvas = document.createElement('canvas');
-					canvas.width = videoElement.videoWidth;
-					canvas.height = videoElement.videoHeight;
-					const ctx = canvas.getContext('2d');
-					ctx.drawImage(videoElement, 0, 0);
-					
-					photoBlob = await new Promise(resolve => {
-						canvas.toBlob(resolve, 'image/jpeg', 0.8);
-					});
+					photoBlob = await capturePhotoFromVideo(videoElement);
 				}
 				
 				console.log('Sending image generation request with params:', {

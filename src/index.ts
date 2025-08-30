@@ -178,7 +178,7 @@ const azureImageEdit = async (c: Context) => {
 		// Create form data for Azure API
 		const azureFormData = new FormData();
 		azureFormData.append('image[]', imageFile);
-		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional airplane motif top-right, center ≈13% from top and 85% from left, sized ≈5% canvas width; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative elements in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. EMPHASIZE AND EXAGGERATE the person's most distinctive facial features - amplify unique characteristics like eye shape, nose structure, jawline, cheekbones, eyebrows, or any defining facial elements to create a more personalized and recognizable artistic interpretation. Make these features bold and prominent while maintaining artistic beauty. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
 		azureFormData.append('model', 'gpt-image-1');
 		azureFormData.append('size', size);
 		azureFormData.append('quality', 'high');
@@ -221,11 +221,68 @@ const azureImageEdit = async (c: Context) => {
 			b64JsonLength: result.data?.[0]?.b64_json?.length
 		});
 
-		// Convert base64 to data URL for direct display
+		// Upload to Cloudflare Images and return shareable URL
 		if (result.data && result.data[0] && result.data[0].b64_json) {
-			const imageDataUrl = `data:image/png;base64,${result.data[0].b64_json}`;
-			console.log('Returning image data URL, length:', imageDataUrl.length);
-			return c.json({ output: imageDataUrl });
+			try {
+				// Generate unique image ID
+				const imageId = `prio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				console.log('Generated image ID:', imageId);
+				
+				// Convert base64 to blob for upload
+				const base64Data = result.data[0].b64_json;
+				console.log('Base64 data length:', base64Data.length);
+				
+				const binaryString = atob(base64Data);
+				const bytes = new Uint8Array(binaryString.length);
+				for (let i = 0; i < binaryString.length; i++) {
+					bytes[i] = binaryString.charCodeAt(i);
+				}
+				console.log('Converted to binary, size:', bytes.length, 'bytes');
+				
+				// Upload to Cloudflare Images
+				const uploadFormData = new FormData();
+				uploadFormData.append('file', new Blob([bytes], { type: 'image/png' }), `${imageId}.png`);
+				uploadFormData.append('id', imageId);
+				
+				const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
+				console.log('Uploading to Cloudflare Images:', uploadUrl);
+				console.log('Account ID:', c.env.CLOUDFLARE_ACCOUNT_ID);
+				console.log('Token length:', c.env.CLOUDFLARE_IMAGES_TOKEN?.length);
+				
+				const uploadResponse = await fetch(uploadUrl, {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+					},
+					body: uploadFormData
+				});
+				
+				const uploadResponseText = await uploadResponse.text();
+				console.log('Cloudflare Images response status:', uploadResponse.status);
+				console.log('Cloudflare Images response:', uploadResponseText);
+				
+				if (!uploadResponse.ok) {
+					console.error('Cloudflare Images upload failed - falling back to base64');
+					// Fallback to base64 data URL
+					const imageDataUrl = `data:image/png;base64,${base64Data}`;
+					return c.json({ output: imageDataUrl });
+				}
+				
+				const uploadResult = JSON.parse(uploadResponseText);
+				console.log('Image uploaded successfully to Cloudflare Images:', imageId);
+				console.log('Upload result:', uploadResult);
+				
+				// Return the direct Cloudflare Images URL
+				const shareableUrl = uploadResult.result.variants[0];
+				console.log('Returning direct Cloudflare Images URL:', shareableUrl);
+				return c.json({ output: shareableUrl });
+				
+			} catch (uploadError) {
+				console.error('Error uploading to Cloudflare Images:', uploadError);
+				// Fallback to base64 data URL
+				const imageDataUrl = `data:image/png;base64,${result.data[0].b64_json}`;
+				return c.json({ output: imageDataUrl });
+			}
 		} else {
 			console.error('No image data in response:', JSON.stringify(result, null, 2));
 			return c.json({ error: 'No image data received from Azure OpenAI', debugInfo: result }, 500);
@@ -278,6 +335,22 @@ const pollinationsImage = async (c: Context) => {
 		}, 500);
 	}
 };
+
+// Image serving endpoint - redirect to Cloudflare Images delivery URL
+app.get('/image/:id', async (c) => {
+	try {
+		const imageId = c.req.param('id');
+		
+		// Redirect to Cloudflare Images delivery URL
+		const deliveryUrl = `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${imageId}/public`;
+		
+		return c.redirect(deliveryUrl, 302);
+		
+	} catch (error) {
+		console.error('Error serving image:', error);
+		return c.json({ error: 'Failed to serve image' }, 500);
+	}
+});
 
 app.post('/generate-image', azureOpenAIImage);
 app.post('/edit-image', azureImageEdit);
