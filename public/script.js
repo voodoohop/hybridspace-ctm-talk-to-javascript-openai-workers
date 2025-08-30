@@ -27,20 +27,44 @@ document.addEventListener('DOMContentLoaded', () => {
 				video: { facingMode: 'user', width: 1280, height: 720 } 
 			});
 			
+			// Create video container with circular vignette
+			const videoContainer = document.createElement('div');
+			videoContainer.style.position = 'relative';
+			videoContainer.style.width = '400px';
+			videoContainer.style.height = '300px';
+			videoContainer.style.margin = '20px auto';
+			videoContainer.style.borderRadius = '8px';
+			videoContainer.style.overflow = 'hidden';
+			
 			videoElement = document.createElement('video');
 			videoElement.srcObject = cameraStream;
 			videoElement.autoplay = true;
 			videoElement.muted = true;
-			videoElement.style.width = '300px';
-			videoElement.style.height = '225px';
-			videoElement.style.borderRadius = '8px';
-			videoElement.style.position = 'fixed';
-			videoElement.style.top = '20px';
-			videoElement.style.left = '20px';
-			videoElement.style.zIndex = '999';
-			videoElement.style.border = '2px solid #FFD400';
+			videoElement.style.width = '100%';
+			videoElement.style.height = '100%';
+			videoElement.style.objectFit = 'cover';
 			
-			document.body.appendChild(videoElement);
+			// Create circular vignette overlay
+			const vignetteOverlay = document.createElement('div');
+			vignetteOverlay.style.position = 'absolute';
+			vignetteOverlay.style.top = '0';
+			vignetteOverlay.style.left = '0';
+			vignetteOverlay.style.width = '100%';
+			vignetteOverlay.style.height = '100%';
+			vignetteOverlay.style.background = 'radial-gradient(circle at center, transparent 25%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0.8) 50%, black 70%)';
+			vignetteOverlay.style.pointerEvents = 'none';
+			
+			videoContainer.appendChild(videoElement);
+			videoContainer.appendChild(vignetteOverlay);
+			
+			// Insert video container after the logo in the content div
+			const contentDiv = document.querySelector('.content');
+			const logo = document.querySelector('.logo');
+			if (contentDiv && logo) {
+				contentDiv.insertBefore(videoContainer, logo.nextSibling);
+			} else {
+				document.body.appendChild(videoContainer);
+			}
 			console.log('Camera initialized successfully');
 		} catch (error) {
 			console.warn('Camera initialization failed:', error);
@@ -50,93 +74,140 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Initialize camera
 	initializeCamera();
 
-	// Add test button for generateImage function
-	const testButton = document.createElement('button');
-	testButton.innerHTML = '🎨 Test Generate Image';
-	testButton.style.position = 'fixed';
-	testButton.style.top = '20px';
-	testButton.style.right = '20px';
-	testButton.style.padding = '10px 20px';
-	testButton.style.fontSize = '16px';
-	testButton.style.borderRadius = '5px';
-	testButton.style.border = '1px solid #ccc';
-	testButton.style.backgroundColor = '#fff';
-	testButton.style.cursor = 'pointer';
-	testButton.style.zIndex = '1000';
-	document.body.appendChild(testButton);
-
-	testButton.addEventListener('click', async () => {
-		try {
-			testButton.disabled = true;
-			testButton.innerHTML = '🎨 Generating...';
-			testButton.style.backgroundColor = '#f0f0f0';
-			
-			await fns.generateImage({
-				prompt: 'A beautiful digital artwork of Rio de Janeiro with Sugarloaf mountain in the background, vibrant colors, artistic style',
-				width: 1024,
-				height: 1024
-			});
-		} catch (error) {
-			console.error('Test generation failed:', error);
-			alert('Test generation failed: ' + error.message);
-		} finally {
-			testButton.disabled = false;
-			testButton.innerHTML = '🎨 Test Generate Image';
-			testButton.style.backgroundColor = '#fff';
-		}
-	});
-
-
-
-	// Add image to page
-	function addImageToPage(url, prompt = '') {
-		const imgWrapper = document.createElement('div');
-		imgWrapper.style.marginBottom = '30px';
-		imgWrapper.style.maxWidth = '800px';
-		imgWrapper.style.width = '100%';
-		imgWrapper.style.margin = '0 auto';
+	// Heart-only animation based on audio amplitude
+	function setupLogoAnimation(audioStream) {
+		const logo = document.querySelector('.logo');
+		if (!logo) return;
 		
+		// Create wrapper div to hold both logo and heart
+		const logoWrapper = document.createElement('div');
+		logoWrapper.style.position = 'relative';
+		logoWrapper.style.display = 'inline-block';
+		
+		// Move logo into wrapper
+		logo.parentNode.insertBefore(logoWrapper, logo);
+		logoWrapper.appendChild(logo);
+		
+		// Create animated heart element
+		const heart = document.createElement('div');
+		heart.innerHTML = '♥';
+		heart.style.position = 'absolute';
+		heart.style.color = '#FF4444';
+		heart.style.fontSize = '60px';
+		heart.style.fontWeight = 'bold';
+		heart.style.left = '28%';
+		heart.style.top = '32%';
+		heart.style.transform = 'translate(-50%, -50%)';
+		heart.style.transformOrigin = 'center';
+		heart.style.pointerEvents = 'none';
+		heart.style.zIndex = '1000';
+		heart.style.textShadow = '0 0 10px rgba(255, 68, 68, 0.8)';
+		
+		// Add heart to wrapper (sibling of logo)
+		logoWrapper.appendChild(heart);
+		
+		console.log('Heart element added to logo wrapper');
+		
+		const audioContext = new AudioContext();
+		const source = audioContext.createMediaStreamSource(audioStream);
+		const analyser = audioContext.createAnalyser();
+		
+		analyser.fftSize = 256;
+		source.connect(analyser);
+		
+		const dataArray = new Uint8Array(analyser.frequencyBinCount);
+		
+		function animate() {
+			analyser.getByteFrequencyData(dataArray);
+			
+			// Calculate average amplitude
+			const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+			
+			// Scale amplitude to a strong range (1.0 to 2.5)
+			const scale = 1 + (average / 255) * 1.5;
+			
+			// Animate only the heart overlay
+			heart.style.transform = `translate(-50%, -50%) scale(${scale})`;
+			heart.style.transition = 'transform 0.05s ease-out';
+			
+			requestAnimationFrame(animate);
+		}
+		
+		animate();
+		console.log('Heart-only animation setup complete');
+	}
+
+
+
+
+	// Add image to page in fullscreen mode
+	function addImageToPage(url, prompt = '') {
+		// Hide all other elements
+		const contentDiv = document.querySelector('.content');
+		const chatContainer = document.getElementById('chat-container');
+		if (contentDiv) contentDiv.style.display = 'none';
+		if (chatContainer) chatContainer.style.display = 'none';
+		
+		// Create fullscreen image container
+		const fullscreenContainer = document.createElement('div');
+		fullscreenContainer.id = 'fullscreen-image-container';
+		fullscreenContainer.style.position = 'fixed';
+		fullscreenContainer.style.top = '0';
+		fullscreenContainer.style.left = '0';
+		fullscreenContainer.style.width = '100vw';
+		fullscreenContainer.style.height = '100vh';
+		fullscreenContainer.style.backgroundColor = '#000';
+		fullscreenContainer.style.display = 'flex';
+		fullscreenContainer.style.flexDirection = 'column';
+		fullscreenContainer.style.alignItems = 'center';
+		fullscreenContainer.style.justifyContent = 'center';
+		fullscreenContainer.style.zIndex = '2000';
+		
+		// Add audio controls at top
+		const audioControls = document.querySelector('audio');
+		if (audioControls) {
+			const controlsClone = audioControls.cloneNode(true);
+			controlsClone.style.position = 'absolute';
+			controlsClone.style.top = '20px';
+			controlsClone.style.left = '50%';
+			controlsClone.style.transform = 'translateX(-50%)';
+			controlsClone.style.zIndex = '2001';
+			fullscreenContainer.appendChild(controlsClone);
+		}
+		
+		// Create image element
 		const img = document.createElement('img');
 		img.onerror = (error) => {
 			console.error('Failed to load image:', error);
-			imgWrapper.style.color = 'red';
-			imgWrapper.textContent = 'Failed to load the generated image. Please try again.';
-		};
-		img.onload = () => {
-			// Scroll to bottom smoothly after image loads
-			window.scrollTo({
-				top: document.body.scrollHeight,
-				behavior: 'smooth'
-			});
+			fullscreenContainer.innerHTML = '<div style="color: red; font-size: 24px;">Failed to load the generated image. Please try again.</div>';
 		};
 		img.src = url;
 		img.alt = `Generated image for prompt: ${prompt}`;
-		img.style.maxWidth = '800px';
-		img.style.width = '100%';
+		img.style.maxWidth = '90vw';
+		img.style.maxHeight = '80vh';
+		img.style.width = 'auto';
 		img.style.height = 'auto';
-		img.style.display = 'block';
-		img.style.margin = '0 auto';
-		img.style.marginBottom = '10px';
+		img.style.objectFit = 'contain';
 		
+		// Create prompt text underneath controls
 		const promptText = document.createElement('div');
-		promptText.style.fontSize = '24px';
-		promptText.style.color = '#333';
-		promptText.style.marginTop = '15px';
-		promptText.style.marginBottom = '5px';
-		const truncatedPrompt = prompt.length > 200 ? prompt.substring(0, 200) + '...' : prompt;
-		promptText.textContent = `Prompt: ${truncatedPrompt}`;
+		promptText.style.position = 'absolute';
+		promptText.style.top = '60px';
+		promptText.style.left = '50%';
+		promptText.style.transform = 'translateX(-50%)';
+		promptText.style.fontSize = '18px';
+		promptText.style.color = '#fff';
+		promptText.style.textAlign = 'center';
+		promptText.style.maxWidth = '80vw';
+		promptText.style.zIndex = '2001';
+		const truncatedPrompt = prompt.length > 150 ? prompt.substring(0, 150) + '...' : prompt;
+		promptText.textContent = truncatedPrompt;
 		
-		imgWrapper.appendChild(img);
-		imgWrapper.appendChild(promptText);
-		imageContainer.appendChild(imgWrapper);
+		fullscreenContainer.appendChild(img);
+		fullscreenContainer.appendChild(promptText);
+		document.body.appendChild(fullscreenContainer);
 		
-		// Initial scroll attempt (in case image is cached)
-		window.scrollTo({
-			top: document.body.scrollHeight,
-			behavior: 'smooth'
-		});
-		
-		return imgWrapper;
+		return fullscreenContainer;
 	}
 
 
@@ -172,12 +243,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		promptElement.style.margin = '20px auto';
 		promptElement.style.maxWidth = '800px';
 		promptElement.style.padding = '20px';
-		promptElement.style.borderRadius = '8px';
-		promptElement.style.backgroundColor = '#f0f0f0';
 		promptElement.style.textAlign = 'center';
-		promptElement.style.fontSize = '24px';
-		promptElement.style.fontWeight = 'bold';
-		promptElement.style.lineHeight = '1.4';
+		promptElement.style.fontSize = '18px';
+		promptElement.style.fontWeight = '400';
+		promptElement.style.lineHeight = '1.5';
+		promptElement.style.color = '#fff';
+		promptElement.style.opacity = '0.8';
 		promptElement.innerHTML = prompt;
 		imageContainer.appendChild(promptElement);
 		window.scrollTo(0, document.body.scrollHeight);
@@ -275,19 +346,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Create a WebRTC Agent
 	const peerConnection = new RTCPeerConnection();
+	
+	// 5-minute timeout for connection
+	let connectionTimeout;
+	let isConnectionClosed = false;
 
 	// On inbound audio add to page
 	peerConnection.ontrack = (event) => {
 		const el = document.createElement('audio');
 		el.srcObject = event.streams[0];
-		el.autoplay = el.controls = true;
-		document.body.appendChild(el);
+		el.autoplay = true;
+		el.controls = true;
+		el.style.display = 'block';
+		el.style.margin = '20px auto';
+		el.style.maxWidth = '300px';
+		el.style.width = '100%';
+		
+		// Insert audio controls in the content div after the logo
+		const contentDiv = document.querySelector('.content');
+		if (contentDiv) {
+			contentDiv.appendChild(el);
+		} else {
+			document.body.appendChild(el);
+		}
+		
+		// Setup audio visualization for logo animation
+		setupLogoAnimation(event.streams[0]);
+		
+		console.log('Audio controls added to page');
 	};
 
 	const dataChannel = peerConnection.createDataChannel('response');
 
+	// Function to close connection and show message
+	function closeConnection() {
+		if (isConnectionClosed) return;
+		
+		isConnectionClosed = true;
+		peerConnection.close();
+		
+		// Clear any existing timeout
+		if (connectionTimeout) {
+			clearTimeout(connectionTimeout);
+		}
+		
+		// Show closure message
+		const messageDiv = document.createElement('div');
+		messageDiv.style.position = 'fixed';
+		messageDiv.style.top = '50%';
+		messageDiv.style.left = '50%';
+		messageDiv.style.transform = 'translate(-50%, -50%)';
+		messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+		messageDiv.style.color = '#fff';
+		messageDiv.style.padding = '30px';
+		messageDiv.style.borderRadius = '12px';
+		messageDiv.style.textAlign = 'center';
+		messageDiv.style.fontSize = '18px';
+		messageDiv.style.zIndex = '10000';
+		messageDiv.style.maxWidth = '400px';
+		messageDiv.innerHTML = `
+			<h3 style="margin: 0 0 15px 0; color: #FFD400;">Sessão Encerrada</h3>
+			<p style="margin: 0;">Sua conversa com Prio foi encerrada após 5 minutos.<br>
+			Recarregue a página para uma nova sessão.</p>
+		`;
+		
+		document.body.appendChild(messageDiv);
+		
+		console.log('Connection closed after 5 minutes');
+	}
+
 	dataChannel.addEventListener('open', async (ev) => {
 		console.log('Opening data channel', ev);
+		
+		// Start 5-minute timeout
+		connectionTimeout = setTimeout(closeConnection, 5 * 60 * 1000); // 5 minutes
 		
 		// Fetch instructions from server
 		let instructions = '';
@@ -338,6 +470,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	dataChannel.addEventListener('message', async (ev) => {
+		// Check if connection is closed
+		if (isConnectionClosed) return;
+		
 		try {
 			const msg = JSON.parse(ev.data);
 			console.log('Received message:', msg);
