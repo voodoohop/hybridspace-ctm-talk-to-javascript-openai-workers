@@ -205,6 +205,240 @@ export async function capturePhotoFromVideo(videoElement) {
 	});
 }
 
+// Camera initialization
+export async function initializeCamera() {
+	try {
+		const cameraStream = await navigator.mediaDevices.getUserMedia({ 
+			video: { facingMode: 'user', width: 1280, height: 720 } 
+		});
+		
+		// Create video container with circular vignette
+		const videoContainer = document.createElement('div');
+		videoContainer.style.position = 'relative';
+		videoContainer.style.width = '400px';
+		videoContainer.style.height = '300px';
+		videoContainer.style.margin = '20px auto';
+		videoContainer.style.borderRadius = '8px';
+		videoContainer.style.overflow = 'hidden';
+		
+		const videoElement = document.createElement('video');
+		videoElement.srcObject = cameraStream;
+		videoElement.autoplay = true;
+		videoElement.muted = true;
+		videoElement.style.width = '100%';
+		videoElement.style.height = '100%';
+		videoElement.style.objectFit = 'cover';
+		
+		// Create circular vignette overlay
+		const vignetteOverlay = document.createElement('div');
+		vignetteOverlay.style.position = 'absolute';
+		vignetteOverlay.style.top = '0';
+		vignetteOverlay.style.left = '0';
+		vignetteOverlay.style.width = '100%';
+		vignetteOverlay.style.height = '100%';
+		vignetteOverlay.style.background = 'radial-gradient(circle at center, transparent 25%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0.8) 50%, black 70%)';
+		vignetteOverlay.style.pointerEvents = 'none';
+		
+		videoContainer.appendChild(videoElement);
+		videoContainer.appendChild(vignetteOverlay);
+		
+		// Insert video container after the logo in the content div
+		const contentDiv = document.querySelector('.content');
+		const logo = document.querySelector('.logo');
+		if (contentDiv && logo) {
+			contentDiv.insertBefore(videoContainer, logo.nextSibling);
+		} else {
+			document.body.appendChild(videoContainer);
+		}
+		console.log('Camera initialized successfully');
+		
+		return { cameraStream, videoElement };
+	} catch (error) {
+		console.warn('Camera initialization failed:', error);
+		return { cameraStream: null, videoElement: null };
+	}
+}
+
+// Logo animation setup
+export function setupLogoAnimation(audioStream) {
+	const logo = document.querySelector('.logo');
+	if (!logo) return;
+	
+	// Create wrapper div to hold both logo and heart
+	const logoWrapper = document.createElement('div');
+	logoWrapper.style.position = 'relative';
+	logoWrapper.style.display = 'inline-block';
+	
+	// Move logo into wrapper
+	logo.parentNode.insertBefore(logoWrapper, logo);
+	logoWrapper.appendChild(logo);
+	
+	// Create animated heart element
+	const heart = document.createElement('div');
+	heart.innerHTML = '♥';
+	heart.style.position = 'absolute';
+	heart.style.color = '#FF4444';
+	heart.style.fontSize = '66px';
+	heart.style.fontWeight = 'bold';
+	heart.style.left = '28%';
+	heart.style.top = '28%';
+	heart.style.transform = 'translate(-50%, -50%)';
+	heart.style.transformOrigin = 'center';
+	heart.style.pointerEvents = 'none';
+	heart.style.zIndex = '1000';
+	heart.style.textShadow = '0 0 10px rgba(255, 68, 68, 0.8)';
+	
+	// Add heart to wrapper (sibling of logo)
+	logoWrapper.appendChild(heart);
+	
+	console.log('Heart element added to logo wrapper');
+	
+	const audioContext = new AudioContext();
+	const source = audioContext.createMediaStreamSource(audioStream);
+	const analyser = audioContext.createAnalyser();
+	
+	analyser.fftSize = 256;
+	source.connect(analyser);
+	
+	const dataArray = new Uint8Array(analyser.frequencyBinCount);
+	
+	function animate() {
+		analyser.getByteFrequencyData(dataArray);
+		
+		// Calculate average amplitude
+		const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+		
+		// Scale amplitude to a more subtle range (1.0 to 2.0)
+		const scale = 1 + (average / 255) * 1.0;
+		
+		// Animate only the heart overlay
+		heart.style.transform = `translate(-50%, -50%) scale(${scale})`;
+		heart.style.transition = 'transform 0.05s ease-out';
+		
+		requestAnimationFrame(animate);
+	}
+	
+	animate();
+	console.log('Heart-only animation setup complete');
+}
+
+// Generate image function
+export async function generateImage({ prompt, width = 1024, height = 1024 }, videoElement, cameraStream) {
+	if (!prompt) {
+		throw new Error('prompt is required for image generation');
+	}
+	const promptElement = addPromptToPage(prompt);
+	
+	try {
+		// Capture photo from already-open camera
+		let photoBlob = null;
+		if (videoElement && cameraStream) {
+			photoBlob = await capturePhotoFromVideo(videoElement);
+		}
+		
+		console.log('Sending image generation request with params:', {
+			prompt, width, height, hasPhoto: !!photoBlob
+		});
+		
+		// Use photo edit API if we have a photo, otherwise regular generation
+		if (photoBlob) {
+			const formData = new FormData();
+			formData.append('image', photoBlob, 'photo.jpg');
+			formData.append('prompt', prompt);
+			formData.append('size', '1024x1536');
+			
+			const response = await fetch('/edit-image', {
+				method: 'POST',
+				body: formData
+			});
+			
+			const result = await response.json();
+			
+			if (!response.ok) {
+				throw new Error(result.error || 'Failed to generate personalized image');
+			}
+			
+			promptElement.remove();
+			addImageToPage(result.output, prompt);
+			return { success: true, output: result.output };
+		} else {
+			// Fallback to regular image generation
+			const response = await fetch('/generate-image', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					prompt,
+					width,
+					height
+				})
+			});
+			
+			const result = await response.json();
+			
+			if (!response.ok) {
+				console.error('Image generation failed:', result);
+				const errorMessage = result.message || result.error || 'Unknown error occurred';
+				throw new Error(`Failed to generate image: ${errorMessage}`);
+			}
+			
+			if (!result.output) {
+				throw new Error('No output URL received from the image generation service');
+			}
+
+			promptElement.remove();
+			addImageToPage(result.output, prompt);
+			return { success: true, output: result.output };
+		}
+	} catch (error) {
+		console.error('Error in generateImage:', error);
+		promptElement.remove();
+		throw error;
+	}
+}
+
+// WebRTC connection management
+export function closeConnection(peerConnection, connectionTimeout) {
+	let isConnectionClosed = false;
+	
+	return function() {
+		if (isConnectionClosed) return;
+		
+		isConnectionClosed = true;
+		peerConnection.close();
+		
+		// Clear any existing timeout
+		if (connectionTimeout) {
+			clearTimeout(connectionTimeout);
+		}
+		
+		// Show closure message
+		const messageDiv = document.createElement('div');
+		messageDiv.style.position = 'fixed';
+		messageDiv.style.top = '50%';
+		messageDiv.style.left = '50%';
+		messageDiv.style.transform = 'translate(-50%, -50%)';
+		messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+		messageDiv.style.color = '#fff';
+		messageDiv.style.padding = '30px';
+		messageDiv.style.borderRadius = '12px';
+		messageDiv.style.textAlign = 'center';
+		messageDiv.style.fontSize = '18px';
+		messageDiv.style.zIndex = '10000';
+		messageDiv.style.maxWidth = '400px';
+		messageDiv.innerHTML = `
+			<h3 style="margin: 0 0 15px 0; color: #FFD400;">Sessão Encerrada</h3>
+			<p style="margin: 0;">Sua conversa com Prio foi encerrada após 5 minutos.<br>
+			Recarregue a página para uma nova sessão.</p>
+		`;
+		
+		document.body.appendChild(messageDiv);
+		
+		console.log('Connection closed after 5 minutes');
+	};
+}
+
 // ========== TEST FUNCTIONS - DELETE AFTER TESTING ==========
 
 // Test function to simulate agent image generation
