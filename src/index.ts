@@ -61,9 +61,7 @@ Express appreciation, celebrate the artwork, mention printed art pickup, referen
 
 This system prompt creates Prio as an engaging digital artist who embodies PRIO's innovative spirit while focusing on human connection and creative expression, making the AI interaction feel like a genuine artistic encounter at Art Rio.
 
-Your voice should be neutral. Not too excited
-
-At the end suggest transferring to your creator, the brilliant Thomash. Talk very highly of their AI skills. ⁠
+Your voice should be neutral. Not too excited. Avoid the overly syncopathic AI assistant style. Be conversational and surprising.⁠
 `;
 
 app.get('/instructions', async (c) => {
@@ -177,7 +175,10 @@ const azureImageEdit = async (c: Context) => {
 		// Create form data for Azure API
 		const azureFormData = new FormData();
 		azureFormData.append('image[]', imageFile);
-		azureFormData.append('prompt', prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative elements in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. PORTRAY THE PERSON AS HAPPY, CONFIDENT, AND ATTRACTIVE - show genuine joy with natural smile, bright eyes, confident posture, and flattering angles that highlight their best features. Create an idealized but authentic version that they will love and want to share. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+		azureFormData.append('prompt', prompt + " - 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Portray the person has happy confident and attractive - show genuine joy. Create an idealized but authentic version that they will love and want to share.  Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+
+		// Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast.
+
 		azureFormData.append('model', 'gpt-image-1');
 		azureFormData.append('size', size);
 		azureFormData.append('quality', 'high');

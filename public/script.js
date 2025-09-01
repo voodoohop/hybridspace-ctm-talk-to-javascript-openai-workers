@@ -109,9 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
 				modalities: ['text', 'audio'],
 				turn_detection: {
 					type: 'server_vad',
-					threshold: 0.3,              // More sensitive (lower threshold)
-					prefix_padding_ms: 250,      // Slightly less padding for quicker response
-					silence_duration_ms: 400,    // Shorter wait time for more responsive conversation
+					threshold: 0.5,              // Less sensitive (higher threshold)
+					prefix_padding_ms: 1000,     // More padding for longer pause
+					silence_duration_ms: 2000,   // Longer wait time before responding
 					create_response: true
 				},
 				tools: [

@@ -1,5 +1,5 @@
-/* Modern typography and layout inspired by Hybrid Space Lab */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+/* PRIO Conception App - Vibrant presentation style with dark background */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
 
 body {
     margin: 0;
@@ -7,10 +7,40 @@ body {
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
     color: #fff;
-    background: #000;
+    background: linear-gradient(135deg, #00B4D8 0%, #0077B6 50%, #023E8A 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Dotted pattern overlay */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.05) 2px, transparent 2px);
+    background-size: 40px 40px;
+    background-position: 10px 10px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .content {
@@ -23,42 +53,66 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
+    position: relative;
+    z-index: 2;
 }
 
 .logo {
     max-width: 300px;
     height: auto;
-    margin-bottom: 3rem;
+    margin-bottom: 1.5rem;
 }
 
 h1 {
     font-size: 4rem;
-    font-weight: 700;
+    font-weight: 900;
     line-height: 1.1;
     margin-bottom: 2rem;
     text-transform: uppercase;
+    color: #fff;
 }
 
 p {
     font-size: 1.25rem;
     margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.9);
 }
 
+/* PRIO turquoise branding colors */
+.vibrant-text {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.text-turquoise { color: #00B4D8; }
+.text-cyan { color: #0077B6; }
+.text-blue { color: #023E8A; }
+.text-light { color: rgba(255, 255, 255, 0.9); }
+.text-white { color: #fff; }
+
+
 button {
-    background: #fff;
-    color: #000;
-    border: 2px solid #fff;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     padding: 1rem 2rem;
     font-size: 1.1rem;
+    font-weight: 700;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
     transition: all 0.3s ease;
     border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 3;
 }
 
 button:hover {
-    background: transparent;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 #chat-container {

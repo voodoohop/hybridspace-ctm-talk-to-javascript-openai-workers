@@ -15,7 +15,7 @@ export function addImageToPage(url, prompt = '') {
 	fullscreenContainer.style.left = '0';
 	fullscreenContainer.style.width = '100vw';
 	fullscreenContainer.style.height = '100vh';
-	fullscreenContainer.style.backgroundColor = '#000';
+	fullscreenContainer.style.background = 'linear-gradient(135deg, #00B4D8 0%, #0077B6 50%, #023E8A 100%)';
 	fullscreenContainer.style.display = 'flex';
 	fullscreenContainer.style.flexDirection = 'column';
 	fullscreenContainer.style.alignItems = 'center';
@@ -23,6 +23,20 @@ export function addImageToPage(url, prompt = '') {
 	fullscreenContainer.style.overflowY = 'auto';
 	fullscreenContainer.style.padding = '20px 0';
 	fullscreenContainer.style.zIndex = '2000';
+	
+	// Add dotted pattern overlay
+	fullscreenContainer.style.position = 'relative';
+	const patternOverlay = document.createElement('div');
+	patternOverlay.style.position = 'absolute';
+	patternOverlay.style.top = '0';
+	patternOverlay.style.left = '0';
+	patternOverlay.style.width = '100%';
+	patternOverlay.style.height = '100%';
+	patternOverlay.style.backgroundImage = 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)';
+	patternOverlay.style.backgroundSize = '20px 20px';
+	patternOverlay.style.pointerEvents = 'none';
+	patternOverlay.style.zIndex = '1';
+	fullscreenContainer.appendChild(patternOverlay);
 	
 	// Create image element
 	const img = document.createElement('img');
@@ -38,15 +52,23 @@ export function addImageToPage(url, prompt = '') {
 	img.style.height = 'auto';
 	img.style.objectFit = 'contain';
 	img.style.marginTop = '20px';
+	img.style.borderRadius = '12px';
+	img.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+	img.style.position = 'relative';
+	img.style.zIndex = '2';
 	
 	// Create prompt text underneath image
 	const promptText = document.createElement('div');
-	promptText.style.fontSize = '18px';
-	promptText.style.color = '#fff';
+	promptText.style.fontSize = '16px';
+	promptText.style.color = 'rgba(255, 255, 255, 0.9)';
 	promptText.style.textAlign = 'center';
 	promptText.style.maxWidth = '80vw';
-	promptText.style.marginTop = '20px';
-	promptText.style.opacity = '0.8';
+	promptText.style.marginTop = '15px';
+	promptText.style.fontFamily = 'Inter, sans-serif';
+	promptText.style.fontWeight = '400';
+	promptText.style.lineHeight = '1.4';
+	promptText.style.position = 'relative';
+	promptText.style.zIndex = '2';
 	const truncatedPrompt = prompt.length > 150 ? prompt.substring(0, 150) + '...' : prompt;
 	promptText.textContent = truncatedPrompt;
 	
@@ -55,16 +77,19 @@ export function addImageToPage(url, prompt = '') {
 	if (url && !url.startsWith('data:')) {
 		shareContainer = document.createElement('div');
 		shareContainer.style.textAlign = 'center';
-		shareContainer.style.marginTop = '15px';
+		shareContainer.style.marginTop = '20px';
 		shareContainer.style.maxWidth = '90vw';
 		shareContainer.style.marginBottom = '20px';
+		shareContainer.style.position = 'relative';
+		shareContainer.style.zIndex = '2';
 		
 		// Share message
 		const shareInfo = document.createElement('div');
-		shareInfo.style.fontSize = '16px';
-		shareInfo.style.color = '#FFD400';
-		shareInfo.style.marginBottom = '12px';
-		shareInfo.style.opacity = '0.9';
+		shareInfo.style.fontSize = '18px';
+		shareInfo.style.color = '#fff';
+		shareInfo.style.marginBottom = '20px';
+		shareInfo.style.fontFamily = 'Inter, sans-serif';
+		shareInfo.style.fontWeight = '600';
 		shareInfo.textContent = '✨ Sua arte está disponível online para compartilhar!';
 		
 		// Link container
@@ -89,44 +114,49 @@ export function addImageToPage(url, prompt = '') {
 		linkText.type = 'text';
 		linkText.value = url;
 		linkText.readOnly = true;
-		linkText.style.padding = '8px 12px';
-		linkText.style.fontSize = '12px';
-		linkText.style.border = '1px solid #FFD400';
-		linkText.style.borderRadius = '5px';
-		linkText.style.backgroundColor = 'rgba(255, 212, 0, 0.1)';
+		linkText.style.padding = '10px 14px';
+		linkText.style.fontSize = '13px';
+		linkText.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+		linkText.style.borderRadius = '8px';
+		linkText.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
 		linkText.style.color = '#fff';
-		linkText.style.width = '300px';
+		linkText.style.width = '280px';
 		linkText.style.maxWidth = '70vw';
+		linkText.style.fontFamily = 'Inter, sans-serif';
+		linkText.style.backdropFilter = 'blur(10px)';
 		
 		const copyButton = document.createElement('button');
 		copyButton.textContent = '📋 Copiar';
-		copyButton.style.padding = '8px 15px';
-		copyButton.style.backgroundColor = '#FFD400';
-		copyButton.style.color = '#000';
-		copyButton.style.border = 'none';
-		copyButton.style.borderRadius = '5px';
+		copyButton.style.padding = '10px 16px';
+		copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
+		copyButton.style.color = '#fff';
+		copyButton.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+		copyButton.style.borderRadius = '8px';
 		copyButton.style.cursor = 'pointer';
-		copyButton.style.fontWeight = 'bold';
-		copyButton.style.fontSize = '12px';
+		copyButton.style.fontWeight = '600';
+		copyButton.style.fontSize = '13px';
+		copyButton.style.fontFamily = 'Inter, sans-serif';
+		copyButton.style.backdropFilter = 'blur(10px)';
+		copyButton.style.transition = 'all 0.3s ease';
 		
 		copyButton.onclick = async () => {
 			try {
 				await navigator.clipboard.writeText(url);
 				copyButton.textContent = '✅ Copiado!';
-				copyButton.style.backgroundColor = '#4CAF50';
+				copyButton.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
 				setTimeout(() => {
 					copyButton.textContent = '📋 Copiar';
-					copyButton.style.backgroundColor = '#FFD400';
+					copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
 				}, 2000);
 			} catch (err) {
 				// Fallback for older browsers
 				linkText.select();
 				document.execCommand('copy');
 				copyButton.textContent = '✅ Copiado!';
-				copyButton.style.backgroundColor = '#4CAF50';
+				copyButton.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
 				setTimeout(() => {
 					copyButton.textContent = '📋 Copiar';
-					copyButton.style.backgroundColor = '#FFD400';
+					copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
 				}, 2000);
 			}
 		};
@@ -134,7 +164,7 @@ export function addImageToPage(url, prompt = '') {
 		linkWrapper.appendChild(linkText);
 		linkWrapper.appendChild(copyButton);
 		
-		// QR Code
+		// QR Code with PRIO logo
 		const qrContainer = document.createElement('div');
 		qrContainer.style.display = 'flex';
 		qrContainer.style.flexDirection = 'column';
@@ -142,17 +172,21 @@ export function addImageToPage(url, prompt = '') {
 		qrContainer.style.gap = '5px';
 		
 		const qrLabel = document.createElement('div');
-		qrLabel.style.fontSize = '11px';
-		qrLabel.style.color = '#FFD400';
-		qrLabel.style.opacity = '0.8';
+		qrLabel.style.fontSize = '12px';
+		qrLabel.style.color = 'rgba(255, 255, 255, 0.8)';
+		qrLabel.style.fontFamily = 'Inter, sans-serif';
+		qrLabel.style.fontWeight = '500';
+		qrLabel.style.marginBottom = '8px';
 		qrLabel.textContent = 'Escaneie para compartilhar';
 		
 		const qrImg = document.createElement('img');
 		qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}`;
+		
 		qrImg.style.width = '120px';
 		qrImg.style.height = '120px';
-		qrImg.style.border = '2px solid #FFD400';
-		qrImg.style.borderRadius = '6px';
+		qrImg.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+		qrImg.style.borderRadius = '8px';
+		qrImg.style.backdropFilter = 'blur(10px)';
 		qrImg.alt = 'QR Code for sharing your artwork';
 		
 		qrContainer.appendChild(qrLabel);
@@ -217,9 +251,10 @@ export async function initializeCamera() {
 		videoContainer.style.position = 'relative';
 		videoContainer.style.width = '400px';
 		videoContainer.style.height = '300px';
-		videoContainer.style.margin = '20px auto';
-		videoContainer.style.borderRadius = '8px';
+		videoContainer.style.margin = '10px auto';
+		videoContainer.style.borderRadius = '12px';
 		videoContainer.style.overflow = 'hidden';
+		videoContainer.style.border = '2px solid rgba(255, 255, 255, 0.2)';
 		
 		const videoElement = document.createElement('video');
 		videoElement.srcObject = cameraStream;
@@ -229,18 +264,19 @@ export async function initializeCamera() {
 		videoElement.style.height = '100%';
 		videoElement.style.objectFit = 'cover';
 		
-		// Create circular vignette overlay
-		const vignetteOverlay = document.createElement('div');
-		vignetteOverlay.style.position = 'absolute';
-		vignetteOverlay.style.top = '0';
-		vignetteOverlay.style.left = '0';
-		vignetteOverlay.style.width = '100%';
-		vignetteOverlay.style.height = '100%';
-		vignetteOverlay.style.background = 'radial-gradient(circle at center, transparent 25%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0.8) 50%, black 70%)';
-		vignetteOverlay.style.pointerEvents = 'none';
+		// Create circular mask with soft fade
+		const maskOverlay = document.createElement('div');
+		maskOverlay.style.position = 'absolute';
+		maskOverlay.style.top = '0';
+		maskOverlay.style.left = '0';
+		maskOverlay.style.width = '100%';
+		maskOverlay.style.height = '100%';
+		maskOverlay.style.background = 'radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.8) 80%, rgba(0,0,0,1) 90%)';
+		maskOverlay.style.pointerEvents = 'none';
+		maskOverlay.style.mixBlendMode = 'multiply';
 		
 		videoContainer.appendChild(videoElement);
-		videoContainer.appendChild(vignetteOverlay);
+		videoContainer.appendChild(maskOverlay);
 		
 		// Insert video container after the logo in the content div
 		const contentDiv = document.querySelector('.content');
@@ -322,12 +358,81 @@ export function setupLogoAnimation(audioStream) {
 	console.log('Heart-only animation setup complete');
 }
 
+// Progress bar helper function
+function createProgressBar() {
+	const progressContainer = document.createElement('div');
+	progressContainer.id = 'progress-container';
+	progressContainer.style.position = 'fixed';
+	progressContainer.style.top = '50%';
+	progressContainer.style.left = '50%';
+	progressContainer.style.transform = 'translate(-50%, -50%)';
+	progressContainer.style.zIndex = '9999';
+	progressContainer.style.textAlign = 'center';
+	progressContainer.style.padding = '20px 25px';
+	progressContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+	progressContainer.style.borderRadius = '16px';
+	progressContainer.style.backdropFilter = 'blur(20px)';
+	progressContainer.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+	progressContainer.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+	
+	const progressText = document.createElement('div');
+	progressText.style.color = '#fff';
+	progressText.style.fontSize = '16px';
+	progressText.style.marginBottom = '15px';
+	progressText.style.fontWeight = '600';
+	progressText.style.fontFamily = 'Inter, sans-serif';
+	progressText.textContent = 'Criando sua arte personalizada...';
+	
+	const progressBarBg = document.createElement('div');
+	progressBarBg.style.width = '280px';
+	progressBarBg.style.height = '6px';
+	progressBarBg.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+	progressBarBg.style.borderRadius = '3px';
+	progressBarBg.style.overflow = 'hidden';
+	
+	const progressBarFill = document.createElement('div');
+	progressBarFill.style.width = '0%';
+	progressBarFill.style.height = '100%';
+	progressBarFill.style.background = 'linear-gradient(90deg, #00B4D8, #0077B6)';
+	progressBarFill.style.borderRadius = '3px';
+	progressBarFill.style.transition = 'width 0.3s ease';
+	progressBarFill.style.boxShadow = '0 0 8px rgba(0, 180, 216, 0.4)';
+	
+	progressBarBg.appendChild(progressBarFill);
+	progressContainer.appendChild(progressText);
+	progressContainer.appendChild(progressBarBg);
+	
+	return { progressContainer, progressBarFill };
+}
+
+function startProgressBar(progressBarFill, duration = 75000) {
+	const startTime = Date.now();
+	
+	const updateProgress = () => {
+		const elapsed = Date.now() - startTime;
+		const progress = Math.min((elapsed / duration) * 100, 100);
+		
+		progressBarFill.style.width = `${progress}%`;
+		
+		if (elapsed < duration) {
+			requestAnimationFrame(updateProgress);
+		}
+	};
+	
+	updateProgress();
+}
+
 // Generate image function
 export async function generateImage({ prompt, width = 1024, height = 1024 }, videoElement, cameraStream) {
 	if (!prompt) {
 		throw new Error('prompt is required for image generation');
 	}
 	const promptElement = addPromptToPage(prompt);
+	
+	// Create and show progress bar
+	const { progressContainer, progressBarFill } = createProgressBar();
+	document.body.appendChild(progressContainer);
+	startProgressBar(progressBarFill, 45000);
 	
 	try {
 		// Capture photo from already-open camera
@@ -359,6 +464,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 			}
 			
 			promptElement.remove();
+			progressContainer.remove();
 			addImageToPage(result.output, prompt);
 			return { success: true, output: result.output };
 		} else {
@@ -388,12 +494,14 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 			}
 
 			promptElement.remove();
+			progressContainer.remove();
 			addImageToPage(result.output, prompt);
 			return { success: true, output: result.output };
 		}
 	} catch (error) {
 		console.error('Error in generateImage:', error);
 		promptElement.remove();
+		progressContainer.remove();
 		throw error;
 	}
 }
@@ -438,6 +546,7 @@ export function closeConnection(peerConnection, connectionTimeout) {
 		console.log('Connection closed after 5 minutes');
 	};
 }
+
 
 // ========== TEST FUNCTIONS - DELETE AFTER TESTING ==========
 
@@ -492,17 +601,35 @@ export function addTestButton() {
 	const testButton = document.createElement('button');
 	testButton.textContent = 'GERAR AGORA';
 	testButton.style.position = 'fixed';
-	testButton.style.top = '10px';
-	testButton.style.right = '10px';
+	testButton.style.top = '15px';
+	testButton.style.right = '15px';
 	testButton.style.zIndex = '9999';
-	testButton.style.padding = '10px 15px';
-	testButton.style.backgroundColor = '#FFD400';
-	testButton.style.color = '#000';
-	testButton.style.border = 'none';
-	testButton.style.borderRadius = '5px';
+	testButton.style.padding = '12px 20px';
+	testButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
+	testButton.style.color = '#fff';
+	testButton.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+	testButton.style.borderRadius = '12px';
 	testButton.style.cursor = 'pointer';
-	testButton.style.fontWeight = 'bold';
+	testButton.style.fontWeight = '700';
+	testButton.style.fontFamily = 'Inter, sans-serif';
+	testButton.style.fontSize = '14px';
+	testButton.style.letterSpacing = '0.05em';
+	testButton.style.textTransform = 'uppercase';
+	testButton.style.backdropFilter = 'blur(10px)';
+	testButton.style.boxShadow = '0 4px 16px rgba(0, 180, 216, 0.3)';
+	testButton.style.transition = 'all 0.3s ease';
 	testButton.onclick = testImageGeneration;
+	
+	// Add hover effect
+	testButton.onmouseenter = () => {
+		testButton.style.transform = 'translateY(-2px)';
+		testButton.style.boxShadow = '0 6px 20px rgba(0, 180, 216, 0.4)';
+	};
+	testButton.onmouseleave = () => {
+		testButton.style.transform = 'translateY(0)';
+		testButton.style.boxShadow = '0 4px 16px rgba(0, 180, 216, 0.3)';
+	};
+	
 	document.body.appendChild(testButton);
 }
 
