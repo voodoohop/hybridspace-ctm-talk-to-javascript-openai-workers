@@ -147,98 +147,51 @@ export function addImageToPage(url, prompt = '') {
 		// Link container
 		const linkContainer = document.createElement('div');
 		linkContainer.style.display = 'flex';
-		linkContainer.style.flexDirection = 'row';
+		linkContainer.style.flexDirection = 'column';
 		linkContainer.style.alignItems = 'center';
 		linkContainer.style.justifyContent = 'center';
 		linkContainer.style.gap = '20px';
-		linkContainer.style.flexWrap = 'wrap';
 		linkContainer.style.marginBottom = '10px';
 		
-		// Shareable link with copy button
-		const linkWrapper = document.createElement('div');
-		linkWrapper.style.display = 'flex';
-		linkWrapper.style.alignItems = 'center';
-		linkWrapper.style.gap = '10px';
-		linkWrapper.style.flexWrap = 'wrap';
-		linkWrapper.style.justifyContent = 'center';
-		
-		const linkText = document.createElement('input');
-		linkText.type = 'text';
-		linkText.value = url;
-		linkText.readOnly = true;
-		linkText.style.padding = '10px 14px';
-		linkText.style.fontSize = '13px';
-		linkText.style.border = '2px solid rgba(255, 255, 255, 0.2)';
-		linkText.style.borderRadius = '8px';
-		linkText.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-		linkText.style.color = '#fff';
-		linkText.style.width = '280px';
-		linkText.style.maxWidth = '70vw';
-		linkText.style.fontFamily = 'Inter, sans-serif';
-		linkText.style.backdropFilter = 'blur(10px)';
-		
-		const copyButton = document.createElement('button');
-		copyButton.textContent = '📋 Copiar';
-		copyButton.style.padding = '10px 16px';
-		copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
-		copyButton.style.color = '#fff';
-		copyButton.style.border = '2px solid rgba(255, 255, 255, 0.2)';
-		copyButton.style.borderRadius = '8px';
-		copyButton.style.cursor = 'pointer';
-		copyButton.style.fontWeight = '600';
-		copyButton.style.fontSize = '13px';
-		copyButton.style.fontFamily = 'Inter, sans-serif';
-		copyButton.style.backdropFilter = 'blur(10px)';
-		copyButton.style.transition = 'all 0.3s ease';
-		
-		copyButton.onclick = async () => {
-			try {
-				await navigator.clipboard.writeText(url);
-				copyButton.textContent = '✅ Copiado!';
-				copyButton.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
-				setTimeout(() => {
-					copyButton.textContent = '📋 Copiar';
-					copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
-				}, 2000);
-			} catch (err) {
-				// Fallback for older browsers
-				linkText.select();
-				document.execCommand('copy');
-				copyButton.textContent = '✅ Copiado!';
-				copyButton.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
-				setTimeout(() => {
-					copyButton.textContent = '📋 Copiar';
-					copyButton.style.background = 'linear-gradient(135deg, #00B4D8, #0077B6)';
-				}, 2000);
-			}
-		};
-		
-		linkWrapper.appendChild(linkText);
-		linkWrapper.appendChild(copyButton);
-		
-		// QR Code with PRIO logo
+		// Clickable QR Code
 		const qrContainer = document.createElement('div');
 		qrContainer.style.display = 'flex';
 		qrContainer.style.flexDirection = 'column';
 		qrContainer.style.alignItems = 'center';
-		qrContainer.style.gap = '5px';
+		qrContainer.style.gap = '10px';
+		qrContainer.style.cursor = 'pointer';
+		qrContainer.style.transition = 'transform 0.2s ease';
+		
+		// Add hover effect
+		qrContainer.onmouseenter = () => {
+			qrContainer.style.transform = 'scale(1.05)';
+		};
+		qrContainer.onmouseleave = () => {
+			qrContainer.style.transform = 'scale(1)';
+		};
+		
+		// Click to open image
+		qrContainer.onclick = () => {
+			window.open(url, '_blank');
+		};
 		
 		const qrLabel = document.createElement('div');
-		qrLabel.style.fontSize = '12px';
-		qrLabel.style.color = 'rgba(255, 255, 255, 0.8)';
+		qrLabel.style.fontSize = '14px';
+		qrLabel.style.color = 'rgba(255, 255, 255, 0.9)';
 		qrLabel.style.fontFamily = 'Inter, sans-serif';
-		qrLabel.style.fontWeight = '500';
-		qrLabel.style.marginBottom = '8px';
-		qrLabel.textContent = 'Escaneie para compartilhar';
+		qrLabel.style.fontWeight = '600';
+		qrLabel.style.marginBottom = '5px';
+		qrLabel.textContent = '📱 Clique ou escaneie para abrir';
 		
 		const qrImg = document.createElement('img');
-		qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}`;
+		qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
 		
-		qrImg.style.width = '120px';
-		qrImg.style.height = '120px';
-		qrImg.style.border = '2px solid rgba(255, 255, 255, 0.2)';
-		qrImg.style.borderRadius = '8px';
+		qrImg.style.width = '150px';
+		qrImg.style.height = '150px';
+		qrImg.style.border = '3px solid rgba(255, 255, 255, 0.3)';
+		qrImg.style.borderRadius = '12px';
 		qrImg.style.backdropFilter = 'blur(10px)';
+		qrImg.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
 		qrImg.alt = 'QR Code for sharing your artwork';
 		
 		qrContainer.appendChild(qrLabel);
@@ -271,7 +224,6 @@ export function addImageToPage(url, prompt = '') {
 			}, 3000);
 		};
 		
-		linkContainer.appendChild(linkWrapper);
 		linkContainer.appendChild(qrContainer);
 		linkContainer.appendChild(printButton);
 		
@@ -601,27 +553,39 @@ export function closeConnection(peerConnection, connectionTimeout) {
 			clearTimeout(connectionTimeout);
 		}
 		
-		// Show closure message
+		// Remove audio element if it exists
+		const audioElement = document.querySelector('audio');
+		if (audioElement) {
+			audioElement.remove();
+		}
+		
+		// Show closure message in place of audio element
 		const messageDiv = document.createElement('div');
-		messageDiv.style.position = 'fixed';
-		messageDiv.style.top = '50%';
-		messageDiv.style.left = '50%';
-		messageDiv.style.transform = 'translate(-50%, -50%)';
+		messageDiv.style.display = 'block';
+		messageDiv.style.margin = '15px auto';
+		messageDiv.style.maxWidth = '400px';
 		messageDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
 		messageDiv.style.color = '#fff';
-		messageDiv.style.padding = '30px';
+		messageDiv.style.padding = '20px 30px';
 		messageDiv.style.borderRadius = '12px';
 		messageDiv.style.textAlign = 'center';
-		messageDiv.style.fontSize = '18px';
-		messageDiv.style.zIndex = '10000';
-		messageDiv.style.maxWidth = '400px';
+		messageDiv.style.fontSize = '16px';
+		messageDiv.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+		messageDiv.style.backdropFilter = 'blur(10px)';
+		messageDiv.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
 		messageDiv.innerHTML = `
-			<h3 style="margin: 0 0 15px 0; color: #FFD400;">Sessão Encerrada</h3>
-			<p style="margin: 0;">Sua conversa com Prio foi encerrada após 5 minutos.<br>
+			<h3 style="margin: 0 0 10px 0; color: #FFD400; font-size: 18px;">Sessão Encerrada</h3>
+			<p style="margin: 0; font-size: 14px; line-height: 1.4;">Sua conversa com Prio foi encerrada após 5 minutos.<br>
 			Recarregue a página para uma nova sessão.</p>
 		`;
 		
-		document.body.appendChild(messageDiv);
+		// Insert in the same place where audio element was
+		const contentDiv = document.querySelector('.content');
+		if (contentDiv) {
+			contentDiv.appendChild(messageDiv);
+		} else {
+			document.body.appendChild(messageDiv);
+		}
 		
 		console.log('Connection closed after 5 minutes');
 	};
