@@ -172,10 +172,22 @@ const azureImageEdit = async (c: Context) => {
 				}
 				console.log('Converted to binary, size:', bytes.length, 'bytes');
 				
-				// Upload to Cloudflare Images
+				// Upload to Cloudflare Images with metadata
 				const uploadFormData = new FormData();
 				uploadFormData.append('file', new Blob([bytes], { type: 'image/png' }), `${imageId}.png`);
 				uploadFormData.append('id', imageId);
+				
+				// Add metadata including the prompt and generation details
+				const metadata = {
+					prompt: prompt,
+					generated_at: new Date().toISOString(),
+					event: 'ArtRio 2025',
+					location: 'Marina da Glória',
+					model: 'gpt-image-1',
+					size: size,
+					type: 'personalized_artwork'
+				};
+				uploadFormData.append('metadata', JSON.stringify(metadata));
 				
 				const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
 				console.log('Uploading to Cloudflare Images:', uploadUrl);
@@ -245,6 +257,41 @@ app.get('/image/:id', async (c) => {
 	} catch (error) {
 		console.error('Error serving image:', error);
 		return c.json({ error: 'Failed to serve image' }, 500);
+	}
+});
+
+// Get image metadata endpoint
+app.get('/image/:id/metadata', async (c) => {
+	try {
+		const imageId = c.req.param('id');
+		
+		// Fetch image details from Cloudflare Images API
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/${imageId}`,
+			{
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		if (!response.ok) {
+			return c.json({ error: 'Image not found' }, 404);
+		}
+		
+		const result = await response.json();
+		
+		// Return the metadata
+		return c.json({
+			id: imageId,
+			metadata: result.result.meta || {},
+			uploaded: result.result.uploaded,
+			variants: result.result.variants
+		});
+		
+	} catch (error) {
+		console.error('Error fetching image metadata:', error);
+		return c.json({ error: 'Failed to fetch image metadata' }, 500);
 	}
 });
 
