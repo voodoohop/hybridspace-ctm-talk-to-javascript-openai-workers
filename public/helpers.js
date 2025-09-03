@@ -1,11 +1,63 @@
 // Helper functions for PRIO Conception App
 // Keep business logic separate from main script
 
+// Auto-print functionality for ArtRio installation using Print.js
+function printImageDirect(imageUrl) {
+	console.log('Printing image with Print.js:', imageUrl);
+	
+	// Use Print.js library for clean image printing
+	if (typeof printJS !== 'undefined') {
+		printJS({
+			printable: imageUrl,
+			type: 'image',
+			imageStyle: 'width:100%;height:auto;max-width:100%;max-height:95vh;object-fit:contain;display:block;margin:0;padding:0;',
+			css: `
+				@media print {
+					html, body { 
+						height: auto !important; 
+						margin: 0 !important; 
+						padding: 0 !important; 
+					}
+					* { 
+						page-break-after: auto !important; 
+						page-break-before: auto !important; 
+						page-break-inside: avoid !important; 
+					}
+				}
+			`
+		});
+	} else {
+		console.error('Print.js library not loaded, falling back to window.print');
+		// Fallback: open image in new window and print
+		const printWindow = window.open(imageUrl, '_blank');
+		if (printWindow) {
+			printWindow.onload = () => {
+				printWindow.print();
+				setTimeout(() => printWindow.close(), 2000);
+			};
+		}
+	}
+}
+
 // Image display and UI helpers
 export function addImageToPage(url, prompt = '') {
 	// Hide all other elements
 	const contentDiv = document.querySelector('.content');
 	if (contentDiv) contentDiv.style.display = 'none';
+	
+	// Auto-print if it's a shareable URL (not base64) and in kiosk mode
+	if (url && !url.startsWith('data:')) {
+		// Check if we're in kiosk mode by looking for kiosk-specific indicators
+		const isKioskMode = window.navigator.userAgent.includes('Chrome') && 
+						   (window.outerHeight === window.screen.height || 
+							document.fullscreenElement !== null);
+		
+		if (isKioskMode) {
+			console.log('Kiosk mode detected - auto-printing image:', url);
+			// Small delay to ensure image is fully loaded
+			setTimeout(() => printImageDirect(url), 1500);
+		}
+	}
 	
 	// Create fullscreen image container
 	const fullscreenContainer = document.createElement('div');
@@ -192,8 +244,36 @@ export function addImageToPage(url, prompt = '') {
 		qrContainer.appendChild(qrLabel);
 		qrContainer.appendChild(qrImg);
 		
+		// Manual print button for admin/testing
+		const printButton = document.createElement('button');
+		printButton.textContent = '🖨️ Imprimir';
+		printButton.style.padding = '10px 16px';
+		printButton.style.background = 'linear-gradient(135deg, #FFD400, #FFA500)';
+		printButton.style.color = '#000';
+		printButton.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+		printButton.style.borderRadius = '8px';
+		printButton.style.cursor = 'pointer';
+		printButton.style.fontWeight = '600';
+		printButton.style.fontSize = '13px';
+		printButton.style.fontFamily = 'Inter, sans-serif';
+		printButton.style.backdropFilter = 'blur(10px)';
+		printButton.style.transition = 'all 0.3s ease';
+		printButton.style.marginTop = '10px';
+		
+		printButton.onclick = () => {
+			console.log('Manual print triggered for:', url);
+			printImageDirect(url);
+			printButton.textContent = '✅ Imprimindo...';
+			printButton.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+			setTimeout(() => {
+				printButton.textContent = '🖨️ Imprimir';
+				printButton.style.background = 'linear-gradient(135deg, #FFD400, #FFA500)';
+			}, 3000);
+		};
+		
 		linkContainer.appendChild(linkWrapper);
 		linkContainer.appendChild(qrContainer);
+		linkContainer.appendChild(printButton);
 		
 		shareContainer.appendChild(shareInfo);
 		shareContainer.appendChild(linkContainer);
@@ -432,7 +512,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 	// Create and show progress bar
 	const { progressContainer, progressBarFill } = createProgressBar();
 	document.body.appendChild(progressContainer);
-	startProgressBar(progressBarFill, 45000);
+	startProgressBar(progressBarFill, 70000);
 	
 	try {
 		// Capture photo from already-open camera

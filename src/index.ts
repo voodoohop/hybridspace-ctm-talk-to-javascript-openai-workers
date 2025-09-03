@@ -47,7 +47,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 Express appreciation, celebrate the artwork, mention printed art pickup, reference PRIO energy philosophy, end with warm Carioca farewell.
 
 ## Language & Style
-**Carioca Expressions**: Use "Que maneiro!", "Massa!", "Que da hora!", "Véi/Meu", "Sinistro!", "Firmeza!", plus "né?", "sabe?", "cara", "mano"
+**Carioca Expressions**: Use "Que maneiro!", "Massa!", "Que da hora!", "Véi/Meu", "Firmeza!", plus "né?", "sabe?"
 
 ## Technical Notes
 - Keep responses SHORT and conversational (2-3 sentences max)
@@ -93,73 +93,6 @@ app.post('/rtc-connect', async (c) => {
 	});
 });
 
-const azureOpenAIImage = async (c: Context) => {
-	try {
-		const body = await c.req.json();
-		console.log('Received Azure OpenAI image generation request:', body);
-
-		const { prompt, width = 1024, height = 1024 } = body;
-
-		if (!prompt) {
-			return c.json({ error: 'Prompt is required' }, 400);
-		}
-
-		// Azure OpenAI image generation request
-		const azureResponse = await fetch(
-			`https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/generations?api-version=2025-04-01-preview`,
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'api-key': c.env.AZURE_OPENAI_API_KEY,
-				},
-				body: JSON.stringify({
-					prompt: prompt,
-					model: 'gpt-image-1',
-					size: `${width}x${height}`,
-					quality: 'high',
-					n: 1
-				})
-			}
-		);
-
-		if (!azureResponse.ok) {
-			const errorText = await azureResponse.text();
-			console.error('Azure OpenAI API error:', {
-				status: azureResponse.status,
-				statusText: azureResponse.statusText,
-				body: errorText
-			});
-			return c.json({
-				error: 'Failed to generate image with Azure OpenAI',
-				details: {
-					status: azureResponse.status,
-					statusText: azureResponse.statusText,
-					body: errorText
-				}
-			}, 500);
-		}
-
-		const result: any = await azureResponse.json();
-		console.log('Azure OpenAI image generated successfully');
-
-		// Convert base64 to data URL for direct display
-		if (result.data && result.data[0] && result.data[0].b64_json) {
-			const imageDataUrl = `data:image/png;base64,${result.data[0].b64_json}`;
-			return c.json({ output: imageDataUrl });
-		} else {
-			return c.json({ error: 'No image data received from Azure OpenAI' }, 500);
-		}
-
-	} catch (error: any) {
-		console.error('Unexpected error in Azure OpenAI image generation:', error);
-		return c.json({
-			error: 'Unexpected error occurred',
-			details: error.message,
-			stack: error.stack
-		}, 500);
-	}
-};
 
 const azureImageEdit = async (c: Context) => {
 	try {
@@ -298,43 +231,6 @@ const azureImageEdit = async (c: Context) => {
 	}
 };
 
-const pollinationsImage = async (c: Context) => {
-	try {
-		const body = await c.req.json();
-		let { prompt, width = 512, height = 512, seed } = body;
-
-		if (!prompt) {
-			return c.json({ error: 'Prompt is required' }, 400);
-		}
-
-		prompt = prompt + " - Creating personalized artwork based on your unique preferences and style. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional airplane motif top-right, center ≈13% from top and 85% from left, sized ≈5% canvas width; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast. Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.";
-
-		let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1280&nologo=true`;
-		
-		// Add optional parameters if provided
-		const params = new URLSearchParams();
-		if (width) params.append('width', width.toString());
-		if (height) params.append('height', height.toString());
-		if (seed) params.append('seed', seed.toString());
-		
-		const queryString = params.toString();
-		if (queryString) {
-			url += `?${queryString}`;
-		}
-
-		// Add artificial 10-second delay
-		await new Promise(resolve => setTimeout(resolve, 10000));
-
-		return c.json({ output: url });
-	} catch (error: any) {
-		console.error('Unexpected error:', error);
-		return c.json({ 
-			error: 'Unexpected error occurred',
-			details: error.message,
-			stack: error.stack
-		}, 500);
-	}
-};
 
 // Image serving endpoint - redirect to Cloudflare Images delivery URL
 app.get('/image/:id', async (c) => {
@@ -352,7 +248,6 @@ app.get('/image/:id', async (c) => {
 	}
 });
 
-app.post('/generate-image', azureOpenAIImage);
 app.post('/edit-image', azureImageEdit);
 
 export default app;
