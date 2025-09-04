@@ -3,7 +3,7 @@
 
 // Auto-print functionality for ArtRio installation using Print.js
 function printImageDirect(imageUrl) {
-	console.log('Printing image with Print.js:', imageUrl);
+	console.log('Printing image with Print.js (A5 format):', imageUrl);
 	
 	// Use Print.js library for clean image printing
 	if (typeof printJS !== 'undefined') {
@@ -13,6 +13,10 @@ function printImageDirect(imageUrl) {
 			imageStyle: 'width:100%;height:auto;max-width:100%;max-height:95vh;object-fit:contain;display:block;margin:0;padding:0;',
 			css: `
 				@media print {
+					@page { 
+						size: A5 portrait; 
+						margin: 5mm; 
+					}
 					html, body { 
 						height: auto !important; 
 						margin: 0 !important; 
@@ -28,13 +32,40 @@ function printImageDirect(imageUrl) {
 		});
 	} else {
 		console.error('Print.js library not loaded, falling back to window.print');
-		// Fallback: open image in new window and print
-		const printWindow = window.open(imageUrl, '_blank');
+		// Fallback: open image in new window and print with A5 CSS
+		const printWindow = window.open('', '_blank');
 		if (printWindow) {
-			printWindow.onload = () => {
-				printWindow.print();
-				setTimeout(() => printWindow.close(), 2000);
-			};
+			printWindow.document.write(`
+				<html>
+				<head>
+					<style>
+						@media print {
+							@page { 
+								size: A5 portrait; 
+								margin: 5mm; 
+							}
+							body { 
+								margin: 0; 
+								padding: 0; 
+								display: flex; 
+								justify-content: center; 
+								align-items: center; 
+								height: 100vh; 
+							}
+							img { 
+								max-width: 100%; 
+								max-height: 100%; 
+								object-fit: contain; 
+							}
+						}
+					</style>
+				</head>
+				<body>
+					<img src="${imageUrl}" onload="window.print(); setTimeout(() => window.close(), 2000);" />
+				</body>
+				</html>
+			`);
+			printWindow.document.close();
 		}
 	}
 }
@@ -471,6 +502,20 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		let photoBlob = null;
 		if (videoElement && cameraStream) {
 			photoBlob = await capturePhotoFromVideo(videoElement);
+			
+			// Hide camera view and stop camera stream after photo capture
+			const videoContainer = videoElement.parentElement;
+			if (videoContainer) {
+				videoContainer.style.display = 'none';
+			}
+			
+			// Stop all camera tracks
+			cameraStream.getTracks().forEach(track => {
+				track.stop();
+				console.log('Camera track stopped:', track.kind);
+			});
+			
+			console.log('Camera hidden and stopped after photo capture');
 		}
 		
 		console.log('Sending image generation request with params:', {

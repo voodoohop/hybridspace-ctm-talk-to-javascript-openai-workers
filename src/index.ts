@@ -279,7 +279,7 @@ app.get('/image/:id/metadata', async (c) => {
 			return c.json({ error: 'Image not found' }, 404);
 		}
 		
-		const result = await response.json();
+		const result: any = await response.json();
 		
 		// Return the metadata
 		return c.json({
@@ -292,6 +292,81 @@ app.get('/image/:id/metadata', async (c) => {
 	} catch (error) {
 		console.error('Error fetching image metadata:', error);
 		return c.json({ error: 'Failed to fetch image metadata' }, 500);
+	}
+});
+
+// Gallery API endpoint - list all images
+app.get('/api/gallery', async (c) => {
+	try {
+		// Fetch images from Cloudflare Images API
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1?per_page=100`,
+			{
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		if (!response.ok) {
+			console.error('Failed to fetch images from Cloudflare:', response.status);
+			return c.json({ error: 'Failed to fetch images' }, 500);
+		}
+		
+		const result: any = await response.json();
+		const images = result.result.images || [];
+		
+		// Filter for PRIO images and add metadata
+		const prioImages = images
+			.filter((img: any) => img.id.startsWith('prio-'))
+			.map((img: any) => ({
+				id: img.id,
+				url: `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${img.id}/public`,
+				thumbnail: `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${img.id}/thumbnail`,
+				uploaded: img.uploaded,
+				metadata: img.meta || {}
+			}))
+			.sort((a: any, b: any) => new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime());
+		
+		return c.json({
+			success: true,
+			total: prioImages.length,
+			images: prioImages
+		});
+		
+	} catch (error) {
+		console.error('Error fetching gallery:', error);
+		return c.json({ error: 'Failed to fetch gallery' }, 500);
+	}
+});
+
+// Delete image endpoint
+app.delete('/api/gallery/:id', async (c) => {
+	try {
+		const imageId = c.req.param('id');
+		
+		// Delete image from Cloudflare Images API
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/${imageId}`,
+			{
+				method: 'DELETE',
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error('Failed to delete image from Cloudflare:', response.status, errorText);
+			return c.json({ error: 'Failed to delete image' }, 500);
+		}
+		
+		return c.json({ success: true, message: 'Image deleted successfully' });
+		
+	} catch (error) {
+		console.error('Error deleting image:', error);
+		return c.json({ error: 'Failed to delete image' }, 500);
 	}
 });
 
