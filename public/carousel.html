@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIO Display</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: black;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .carousel-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .carousel-image {
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
+        }
+
+        .qr-code {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            background: white;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="carousel-container">
+        <img id="carouselImage" class="carousel-image" style="display: none;">
+        <div id="qrCode" class="qr-code" style="display: none;">
+            <img id="qrCodeImg">
+        </div>
+    </div>
+
+    <script>
+        let allImages = [];
+        let currentIndex = 0;
+        let autoplayInterval = null;
+        let lastImageId = null;
+        
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const showLatestOnly = urlParams.get('latest') === 'true';
+
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/gallery');
+                const data = await response.json();
+                
+                if (data.success && data.images.length > 0) {
+                    allImages = data.images;
+                    
+                    if (showLatestOnly) {
+                        // Show only the latest image
+                        const latestImage = allImages[0]; // Already sorted by date (newest first)
+                        
+                        // Only update if there's a new image
+                        if (latestImage.id !== lastImageId) {
+                            lastImageId = latestImage.id;
+                            displayLatestImage(latestImage);
+                        }
+                    } else {
+                        // Original carousel behavior
+                        shuffleArray(allImages);
+                        currentIndex = 0;
+                        displayCurrentImage();
+                        if (!autoplayInterval) {
+                            startAutoplay();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading images:', error);
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function displayLatestImage(image) {
+            const carouselImage = document.getElementById('carouselImage');
+            const qrCode = document.getElementById('qrCode');
+            const qrCodeImg = document.getElementById('qrCodeImg');
+
+            // Set image
+            carouselImage.src = image.url;
+            carouselImage.style.display = 'block';
+
+            // Set QR code
+            qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(image.url)}`;
+            qrCode.style.display = 'block';
+            
+            console.log('Displaying latest image:', image.id);
+        }
+
+        function displayCurrentImage() {
+            if (allImages.length === 0) return;
+
+            const image = allImages[currentIndex];
+            const carouselImage = document.getElementById('carouselImage');
+            const qrCode = document.getElementById('qrCode');
+            const qrCodeImg = document.getElementById('qrCodeImg');
+
+            // Set image
+            carouselImage.src = image.url;
+            carouselImage.style.display = 'block';
+
+            // Set QR code
+            qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(image.url)}`;
+            qrCode.style.display = 'block';
+        }
+
+        function nextImage() {
+            if (allImages.length === 0) return;
+            
+            currentIndex = Math.floor(Math.random() * allImages.length);
+            displayCurrentImage();
+        }
+
+        function startAutoplay() {
+            autoplayInterval = setInterval(nextImage, 15000); // Switch every 15 seconds
+        }
+
+        // Load images on page load
+        window.addEventListener('load', loadImages);
+
+        // Reload images - more frequently for latest-only mode
+        const pollInterval = showLatestOnly ? 5000 : 30000; // 5 seconds for latest, 30 seconds for carousel
+        setInterval(loadImages, pollInterval);
+        
+        console.log(`Carousel mode: ${showLatestOnly ? 'Latest only' : 'Full carousel'}, polling every ${pollInterval/1000}s`);
+    </script>
+</body>
+</html>

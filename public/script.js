@@ -1,5 +1,5 @@
 // Import helper functions
-import { addImageToPage, addPromptToPage, capturePhotoFromVideo, addTestButton, initializeCamera, setupLogoAnimation, generateImage, closeConnection } from './helpers.js';
+import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, resetForNextUser, addTestButton } from './helpers.js';
 
 // Global camera state - accessible to test functions
 let cameraStream = null;
@@ -7,13 +7,7 @@ let videoElement = null;
 
 // Initialize containers when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-	// Create containers
-	const imageContainer = document.createElement('div');
-	imageContainer.id = 'image-container';
-	imageContainer.style.padding = '20px';
-	imageContainer.style.maxWidth = '800px';
-	imageContainer.style.margin = '0 auto';
-	document.body.appendChild(imageContainer);
+	// No need for image container in controlled environment - images handled by helpers.js
 
 	// Initialize camera and set up test button after camera is ready
 	initializeCamera().then((result) => {
@@ -28,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Make fns globally accessible for test functions
 		window.fns = fns;
 		
-		// Add test button (DELETE AFTER TESTING)
+		// Add test button
 		addTestButton();
 	});
 
@@ -46,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// 5-minute timeout for connection
 	let connectionTimeout;
-	let isConnectionClosed = false;
 
 	// On inbound audio add to page
 	peerConnection.ontrack = (event) => {
@@ -147,9 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	dataChannel.addEventListener('message', async (ev) => {
-		// Check if connection is closed
-		if (isConnectionClosed) return;
-		
 		try {
 			const msg = JSON.parse(ev.data);
 			console.log('Received message:', msg);
