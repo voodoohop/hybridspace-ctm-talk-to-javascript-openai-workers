@@ -460,3 +460,92 @@ export function addTestButton() {
 	document.body.appendChild(testButton);
 }
 
+// Session reset button for debugging purposes
+export function addSessionResetButton() {
+	const resetButton = document.createElement('button');
+	resetButton.textContent = 'RESET SESSION';
+	resetButton.style.position = 'fixed';
+	resetButton.style.top = '15px';
+	resetButton.style.left = '15px';
+	resetButton.style.zIndex = '9999';
+	resetButton.style.padding = '12px 20px';
+	resetButton.style.background = 'linear-gradient(135deg, #FFD400, #FFA500)';
+	resetButton.style.color = '#000';
+	resetButton.style.border = '2px solid rgba(255, 212, 0, 0.3)';
+	resetButton.style.borderRadius = '12px';
+	resetButton.style.cursor = 'pointer';
+	resetButton.style.fontWeight = '700';
+	resetButton.style.fontFamily = 'Inter, sans-serif';
+	resetButton.style.fontSize = '14px';
+	resetButton.style.letterSpacing = '0.05em';
+	resetButton.style.textTransform = 'uppercase';
+	resetButton.style.backdropFilter = 'blur(10px)';
+	resetButton.style.boxShadow = '0 4px 16px rgba(255, 212, 0, 0.3)';
+	resetButton.style.transition = 'all 0.3s ease';
+	
+	resetButton.onclick = async () => {
+		try {
+			console.log('🔄 SESSION RESET BUTTON CLICKED - Starting new session...');
+			
+			// Disable button during request
+			resetButton.disabled = true;
+			resetButton.textContent = 'RESETTING...';
+			resetButton.style.opacity = '0.6';
+			
+			// Call the start-session API endpoint (same as admin page)
+			const response = await fetch('/api/start-session', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				}
+			});
+			
+			if (!response.ok) {
+				throw new Error(`Failed to start session: ${response.status}`);
+			}
+			
+			const result = await response.json();
+			console.log('✅ New session started successfully:', result);
+			
+			// Reset button state
+			resetButton.disabled = false;
+			resetButton.textContent = 'RESET SESSION';
+			resetButton.style.opacity = '1';
+			
+			// The session polling in script.js will detect the new session and reset WebRTC
+			
+		} catch (error) {
+			console.error('💥 Session reset failed:', error);
+			
+			// Reset button state on error
+			resetButton.disabled = false;
+			resetButton.textContent = 'RESET SESSION';
+			resetButton.style.opacity = '1';
+			
+			// Show error feedback
+			resetButton.textContent = 'ERROR - RETRY';
+			resetButton.style.background = 'linear-gradient(135deg, #FF6B6B, #FF4444)';
+			resetButton.style.color = '#fff';
+			
+			// Reset to normal after 3 seconds
+			setTimeout(() => {
+				resetButton.textContent = 'RESET SESSION';
+				resetButton.style.background = 'linear-gradient(135deg, #FFD400, #FFA500)';
+				resetButton.style.color = '#000';
+			}, 3000);
+		}
+	};
+	
+	// Add hover effect
+	resetButton.onmouseenter = () => {
+		resetButton.style.transform = 'translateY(-2px)';
+		resetButton.style.boxShadow = '0 6px 20px rgba(255, 212, 0, 0.4)';
+	};
+	resetButton.onmouseleave = () => {
+		resetButton.style.transform = 'translateY(0)';
+		resetButton.style.boxShadow = '0 4px 16px rgba(255, 212, 0, 0.3)';
+	};
+	
+	document.body.appendChild(resetButton);
+}
+

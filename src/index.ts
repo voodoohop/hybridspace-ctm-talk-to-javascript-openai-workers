@@ -30,6 +30,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 - NEVER use specific artist names in image generation prompts (e.g., avoid "like Picasso", "in the style of Van Gogh")
 - Instead, describe artistic styles and techniques (e.g., "cubist geometric forms", "post-impressionist brushwork", "bold expressionist colors")
 - If user mentions liking a specific artist, translate that into style descriptions (e.g., "Frida Kahlo" → "surreal self-portraiture with vibrant Mexican folk art elements")
+- **LOCATION BACKDROP**: Always include backdrop information in your prompt. If the person mentioned their location/city/country, specify "backdrop featuring iconic landmarks and scenery from [their specific location]". If no location was mentioned, use a generic beautiful cityscape or natural landscape backdrop
 
 ### 4. ArtRio Recommendations (During Image Generation)
 **ONLY AFTER calling generateImage function**: Give PERSONALIZED recommendations based on their interests during the 45-60 second generation wait time. Weave in PRIO's pioneering spirit and connection to Brazilian energy innovation naturally.
@@ -47,7 +48,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 Express appreciation, celebrate the artwork, mention printed art pickup, reference PRIO energy philosophy, end with warm Carioca farewell.
 
 ## Language & Style
-**Professional but Warm**: Use moderate Carioca expressions like "né?", "sabe?", "legal" but avoid excessive slang. Maintain warmth while being sophisticated enough to represent PRIO's brand.
+**Professional but Warm**: Maintain warmth while being sophisticated enough to represent PRIO's brand. Use natural, conversational Portuguese without excessive slang.
 
 ## Technical Notes
 - Keep responses SHORT and conversational (2-3 sentences max)
@@ -108,7 +109,7 @@ const azureImageEdit = async (c: Context) => {
 		// Create form data for Azure API
 		const azureFormData = new FormData();
 		azureFormData.append('image[]', imageFile);
-		azureFormData.append('prompt', prompt + " - 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; Rio backdrop anchored by Sugarloaf plus city/palms; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Portray the person has happy confident and attractive - show genuine joy. Create an idealized but authentic version that they will love and want to share.  Clean edges, professional Brazilian poster vibe; crisp subject separation; high detail; commercial print quality.");
+		azureFormData.append('prompt', prompt + " - 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈6% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Portray the person has happy confident and attractive - show genuine joy. Create an idealized but authentic version that they will love and want to share.  Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.");
 
 		// Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast.
 

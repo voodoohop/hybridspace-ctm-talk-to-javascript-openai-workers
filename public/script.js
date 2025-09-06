@@ -1,5 +1,5 @@
 // Import helper functions
-import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton } from './helpers.js';
+import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton, addSessionResetButton } from './helpers.js';
 
 // Global camera state - accessible to test functions
 let cameraStream = null;
@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		// Add test button
 		addTestButton();
+		
+		// Add debug session reset button
+		addSessionResetButton();
 		
 		// Start session polling
 		startSessionPolling();
