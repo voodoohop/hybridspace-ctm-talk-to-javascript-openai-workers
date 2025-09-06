@@ -106,16 +106,48 @@ export function addImageToPage(url, prompt = '') {
 
 // Camera utilities
 export async function capturePhotoFromVideo(videoElement) {
-	if (!videoElement) return null;
+	console.log('📸 capturePhotoFromVideo() called');
+	console.log('📸 Video element:', !!videoElement);
+	
+	if (!videoElement) {
+		console.error('❌ No video element provided');
+		return null;
+	}
+	
+	console.log('📸 Video element properties:', {
+		videoWidth: videoElement.videoWidth,
+		videoHeight: videoElement.videoHeight,
+		readyState: videoElement.readyState,
+		paused: videoElement.paused,
+		ended: videoElement.ended,
+		currentTime: videoElement.currentTime
+	});
+	
+	if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+		console.error('❌ Video dimensions are 0x0 - video not ready');
+		return null;
+	}
 	
 	const canvas = document.createElement('canvas');
 	canvas.width = videoElement.videoWidth;
 	canvas.height = videoElement.videoHeight;
 	const ctx = canvas.getContext('2d');
-	ctx.drawImage(videoElement, 0, 0);
+	
+	console.log('📸 Canvas created:', { width: canvas.width, height: canvas.height });
+	
+	try {
+		ctx.drawImage(videoElement, 0, 0);
+		console.log('📸 Image drawn to canvas successfully');
+	} catch (error) {
+		console.error('❌ Failed to draw image to canvas:', error);
+		return null;
+	}
 	
 	return new Promise(resolve => {
-		canvas.toBlob(resolve, 'image/jpeg', 0.8);
+		canvas.toBlob((blob) => {
+			console.log('📸 Canvas.toBlob result:', !!blob, blob?.size);
+			resolve(blob);
+		}, 'image/jpeg', 0.8);
 	});
 }
 
@@ -126,23 +158,24 @@ export async function initializeCamera() {
 			video: { facingMode: 'user', width: 1280, height: 720 } 
 		});
 		
-		// Create hidden video element for photo capture only
+		// Create video element for photo capture - hidden but functional
 		const videoElement = document.createElement('video');
 		videoElement.srcObject = cameraStream;
 		videoElement.autoplay = true;
 		videoElement.muted = true;
 		videoElement.style.position = 'absolute';
-		videoElement.style.top = '-9999px';
-		videoElement.style.left = '-9999px';
-		videoElement.style.width = '1px';
-		videoElement.style.height = '1px';
-		videoElement.style.opacity = '0';
+		videoElement.style.top = '0';
+		videoElement.style.left = '0';
+		videoElement.style.width = '1280px';
+		videoElement.style.height = '720px';
+		videoElement.style.visibility = 'hidden';
 		videoElement.style.pointerEvents = 'none';
+		videoElement.style.zIndex = '-1';
 		
 		// Append hidden video to body for photo capture functionality
 		document.body.appendChild(videoElement);
 		
-		console.log('Camera initialized successfully (hidden for main experience)');
+		console.log('Camera initialized successfully (hidden but functional for photo capture)');
 		
 		return { cameraStream, videoElement };
 	} catch (error) {
@@ -281,15 +314,63 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		formData.append('prompt', prompt);
 		formData.append('size', '1024x1536');
 		
+		// First test if server is responding
+		console.log('🧪 Testing server connectivity...');
+		try {
+			const testResponse = await fetch('/test');
+			console.log('🧪 Server test response:', testResponse.status, testResponse.statusText);
+			const testData = await testResponse.json();
+			console.log('🧪 Server test data:', testData);
+		} catch (testError) {
+			console.error('🧪 Server connectivity test failed:', testError);
+		}
+		
 		console.log('🌐 Making POST request to /edit-image...');
-		const response = await fetch('/edit-image', {
-			method: 'POST',
-			body: formData
-		});
+		console.log('📤 FormData contents:');
+		for (let [key, value] of formData.entries()) {
+			if (value instanceof File) {
+				console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+			} else {
+				console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) + '...' : value}`);
+			}
+		}
+		
+		// Add timeout to the fetch request
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => {
+			console.error('⏰ Request timeout after 2 minutes');
+			controller.abort();
+		}, 120000); // 2 minute timeout
+		
+		let response;
+		try {
+			response = await fetch('/edit-image', {
+				method: 'POST',
+				body: formData,
+				signal: controller.signal
+			});
+			clearTimeout(timeoutId);
+		} catch (fetchError) {
+			clearTimeout(timeoutId);
+			console.error('🚫 Fetch error:', fetchError);
+			console.error('🚫 Error name:', fetchError.name);
+			console.error('🚫 Error message:', fetchError.message);
+			throw new Error(`Network error: ${fetchError.message}`);
+		}
 		
 		console.log('📥 Response received from /edit-image:', response.status, response.statusText);
-		const result = await response.json();
-		console.log('📄 Response data:', result);
+		console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+		
+		let result;
+		try {
+			const responseText = await response.text();
+			console.log('📄 Raw response text (first 500 chars):', responseText.substring(0, 500));
+			result = JSON.parse(responseText);
+			console.log('📄 Parsed response data:', result);
+		} catch (parseError) {
+			console.error('📄 Failed to parse response as JSON:', parseError);
+			throw new Error('Invalid response format from server');
+		}
 		
 		if (!response.ok) {
 			throw new Error(result.error || 'Failed to generate personalized image');
@@ -299,7 +380,9 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		
 		return { success: true, output: result.output };
 	} catch (error) {
-		console.error('Error in generateImage:', error);
+		console.error('💥 Error in generateImage:', error);
+		console.error('💥 Error message:', error.message);
+		console.error('💥 Error stack:', error.stack);
 		throw error;
 	}
 }

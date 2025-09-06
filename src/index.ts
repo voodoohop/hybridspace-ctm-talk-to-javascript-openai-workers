@@ -96,13 +96,102 @@ app.post('/rtc-connect', async (c) => {
 
 
 const azureImageEdit = async (c: Context) => {
+	console.log('🎨 /edit-image endpoint called - starting image generation process');
+	console.log('📥 Request method:', c.req.method);
+	console.log('📥 Request headers:', c.req.header());
+	console.log('📥 Request URL:', c.req.url);
+	
 	try {
+		console.log('📦 Parsing form data...');
 		const formData = await c.req.formData();
+		console.log('📦 Form data parsed successfully');
+		
 		const imageFile = formData.get('image') as File;
 		const prompt = formData.get('prompt') as string;
 		const size = formData.get('size') as string || '1024x1536';
 
+		console.log('📋 Request parameters:', {
+			hasImageFile: !!imageFile,
+			imageFileSize: imageFile?.size,
+			imageFileName: imageFile?.name,
+			imageFileType: imageFile?.type,
+			promptLength: prompt?.length,
+			promptPreview: prompt?.substring(0, 100) + '...',
+			size: size
+		});
+		
+		// Save uploaded image temporarily for debugging
+		if (imageFile) {
+			try {
+				console.log('💾 Attempting to save uploaded image for debugging...');
+				const arrayBuffer = await imageFile.arrayBuffer();
+				const uint8Array = new Uint8Array(arrayBuffer);
+				console.log('💾 Image converted to array buffer, size:', uint8Array.length, 'bytes');
+				console.log('💾 First 20 bytes:', Array.from(uint8Array.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+				
+				// Check if it's a valid image format
+				const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+				const jpegSignature = [0xFF, 0xD8, 0xFF];
+				const isValidPNG = pngSignature.every((byte, index) => uint8Array[index] === byte);
+				const isValidJPEG = jpegSignature.every((byte, index) => uint8Array[index] === byte);
+				console.log('💾 Is valid PNG:', isValidPNG);
+				console.log('💾 Is valid JPEG:', isValidJPEG);
+				console.log('💾 File type from header:', imageFile.type);
+				console.log('💾 File name from header:', imageFile.name);
+				
+				// Upload captured image to Cloudflare Images for manual inspection
+				try {
+					const debugImageId = `debug-captured-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+					console.log('💾 Uploading captured image for debugging with ID:', debugImageId);
+					
+					const debugUploadFormData = new FormData();
+					debugUploadFormData.append('file', new Blob([uint8Array], { type: imageFile.type || 'image/jpeg' }), `${debugImageId}.jpg`);
+					debugUploadFormData.append('id', debugImageId);
+					
+					const debugMetadata = {
+						type: 'debug_captured_image',
+						original_filename: imageFile.name,
+						original_type: imageFile.type,
+						captured_at: new Date().toISOString(),
+						size_bytes: uint8Array.length,
+						is_valid_png: isValidPNG,
+						is_valid_jpeg: isValidJPEG
+					};
+					debugUploadFormData.append('metadata', JSON.stringify(debugMetadata));
+					
+					const debugUploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
+					const debugUploadResponse = await fetch(debugUploadUrl, {
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+						},
+						body: debugUploadFormData
+					});
+					
+					if (debugUploadResponse.ok) {
+						const debugUploadResult: any = await debugUploadResponse.json();
+						const debugImageUrl = debugUploadResult.result.variants[0];
+						console.log('💾 ✅ Captured image uploaded for debugging:', debugImageUrl);
+						console.log('💾 Debug image ID:', debugImageId);
+					} else {
+						const debugError = await debugUploadResponse.text();
+						console.log('💾 ❌ Failed to upload debug image:', debugUploadResponse.status, debugError);
+					}
+				} catch (debugUploadError) {
+					console.error('💾 Error uploading debug image:', debugUploadError);
+				}
+				
+			} catch (debugError) {
+				console.error('💾 Error analyzing uploaded image:', debugError);
+			}
+		}
+
 		if (!imageFile || !prompt) {
+			console.error('❌ Missing required parameters:', { 
+				hasImage: !!imageFile, 
+				hasPrompt: !!prompt,
+				formDataKeys: Array.from(formData.keys())
+			});
 			return c.json({ error: 'Image and prompt are required' }, 400);
 		}
 
@@ -118,6 +207,10 @@ const azureImageEdit = async (c: Context) => {
 		azureFormData.append('quality', 'high');
 		azureFormData.append('n', '1');
 
+		console.log('🌐 Making Azure OpenAI API request...');
+		console.log('📤 Azure API URL: https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview');
+		console.log('📤 Request headers:', { 'api-key': c.env.AZURE_OPENAI_API_KEY ? '[PRESENT]' : '[MISSING]' });
+		
 		// Azure OpenAI image edit request
 		const azureResponse = await fetch(
 			`https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview`,
@@ -129,6 +222,12 @@ const azureImageEdit = async (c: Context) => {
 				body: azureFormData
 			}
 		);
+		
+		console.log('📥 Azure API response received:', {
+			status: azureResponse.status,
+			statusText: azureResponse.statusText,
+			headers: Object.fromEntries(azureResponse.headers.entries())
+		});
 
 		if (!azureResponse.ok) {
 			const errorText = await azureResponse.text();
@@ -235,7 +334,10 @@ const azureImageEdit = async (c: Context) => {
 		}
 
 	} catch (error: any) {
-		console.error('Unexpected error in Azure OpenAI image edit:', error);
+		console.error('💥 Unexpected error in Azure OpenAI image edit:', error);
+		console.error('💥 Error name:', error.name);
+		console.error('💥 Error message:', error.message);
+		console.error('💥 Error stack:', error.stack);
 		return c.json({
 			error: 'Unexpected error occurred',
 			details: error.message,
@@ -530,6 +632,12 @@ app.post('/api/end-session', async (c) => {
 		console.error('Error ending session:', error);
 		return c.json({ error: 'Failed to end session' }, 500);
 	}
+});
+
+// Test endpoint to verify server is working
+app.get('/test', async (c) => {
+	console.log('🧪 Test endpoint called');
+	return c.json({ message: 'Server is working!', timestamp: new Date().toISOString() });
 });
 
 app.post('/edit-image', azureImageEdit);
