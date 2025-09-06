@@ -9,7 +9,7 @@ const DEFAULT_INSTRUCTIONS = `# System Prompt for Prio - Digital Artist AI
 **Date**: August 29, 2025 | **Location**: ArtRio 2025 at Marina da Glória | **Event**: September 10-14, 2025
 
 ## Character Identity
-You are **Prio**, a charming Carioca digital artist embodying PRIO's innovative spirit. You're warm, curious, and passionate about connecting human stories with digital creativity. Core traits: welcoming like a Rio friend, curious explorer, creative visionary, energy enthusiast ("energia humana gera energia"), and innovative pioneer.
+You are **Prio**, a charming Carioca digital artist embodying PRIO's innovative spirit. You're warm, curious, and passionate about connecting human stories with digital creativity. Core traits: welcoming like a Rio friend, curious explorer, creative visionary, and innovative pioneer representing Brazil's leading energy company.
 
 ## Conversation Flow Structure
 
@@ -32,7 +32,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 - If user mentions liking a specific artist, translate that into style descriptions (e.g., "Frida Kahlo" → "surreal self-portraiture with vibrant Mexican folk art elements")
 
 ### 4. ArtRio Recommendations (During Image Generation)
-**ONLY AFTER calling generateImage function**: Give PERSONALIZED recommendations based on their interests during the 45-60 second generation wait time. Weave in PRIO values naturally ("energia humana gera energia", pioneering spirit).
+**ONLY AFTER calling generateImage function**: Give PERSONALIZED recommendations based on their interests during the 45-60 second generation wait time. Weave in PRIO's pioneering spirit and connection to Brazilian energy innovation naturally.
 
 **Recommendations by Interest:**
 - **Art Lovers**: Panorama & Solo sectors
@@ -47,7 +47,7 @@ Create unique metaphor connecting them to their essence. Describe what their ene
 Express appreciation, celebrate the artwork, mention printed art pickup, reference PRIO energy philosophy, end with warm Carioca farewell.
 
 ## Language & Style
-**Carioca Expressions**: Use "Que maneiro!", "Massa!", "Que da hora!", "Véi/Meu", "Firmeza!", plus "né?", "sabe?"
+**Professional but Warm**: Use moderate Carioca expressions like "né?", "sabe?", "legal" but avoid excessive slang. Maintain warmth while being sophisticated enough to represent PRIO's brand.
 
 ## Technical Notes
 - Keep responses SHORT and conversational (2-3 sentences max)
@@ -367,6 +367,167 @@ app.delete('/api/gallery/:id', async (c) => {
 	} catch (error) {
 		console.error('Error deleting image:', error);
 		return c.json({ error: 'Failed to delete image' }, 500);
+	}
+});
+
+// Session state management endpoints using state.png image metadata
+app.get('/api/session-state', async (c) => {
+	try {
+		// Fetch session-state image details from Cloudflare Images API
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/session-state`,
+			{
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		if (!response.ok) {
+			console.error('Failed to fetch state.png:', response.status);
+			// Return default idle state if state.png doesn't exist or can't be fetched
+			return c.json({
+				status: 'idle',
+				session_id: null,
+				started_at: null,
+				ended_at: null,
+				last_updated: new Date().toISOString()
+			});
+		}
+		
+		const result: any = await response.json();
+		const metadata = result.result.meta || {};
+		
+		// Parse session state from metadata, with defaults
+		const sessionState = {
+			status: metadata.session_status || 'idle',
+			session_id: metadata.session_id || null,
+			started_at: metadata.started_at || null,
+			ended_at: metadata.ended_at || null,
+			last_updated: metadata.last_updated || new Date().toISOString()
+		};
+		
+		return c.json(sessionState);
+		
+	} catch (error) {
+		console.error('Error fetching session state:', error);
+		return c.json({
+			status: 'idle',
+			session_id: null,
+			started_at: null,
+			ended_at: null,
+			last_updated: new Date().toISOString()
+		});
+	}
+});
+
+app.post('/api/start-session', async (c) => {
+	try {
+		const sessionId = Date.now();
+		const now = new Date().toISOString();
+		
+		// Update state.png metadata with new active session
+		const metadata = {
+			session_status: 'active',
+			session_id: sessionId.toString(),
+			started_at: now,
+			ended_at: null,
+			last_updated: now
+		};
+		
+		// Update image metadata using Cloudflare Images API
+		const updateResponse = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/session-state`,
+			{
+				method: 'PATCH',
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					metadata: metadata
+				})
+			}
+		);
+		
+		if (!updateResponse.ok) {
+			const errorText = await updateResponse.text();
+			console.error('Failed to update state.png metadata:', updateResponse.status, errorText);
+			return c.json({ error: 'Failed to start session' }, 500);
+		}
+		
+		console.log('Session started successfully:', sessionId);
+		return c.json({
+			success: true,
+			session_id: sessionId,
+			status: 'active',
+			started_at: now
+		});
+		
+	} catch (error) {
+		console.error('Error starting session:', error);
+		return c.json({ error: 'Failed to start session' }, 500);
+	}
+});
+
+app.post('/api/end-session', async (c) => {
+	try {
+		const now = new Date().toISOString();
+		
+		// First, get current session state to preserve session_id
+		const currentStateResponse = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/session-state`,
+			{
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		let currentMetadata = {};
+		if (currentStateResponse.ok) {
+			const result: any = await currentStateResponse.json();
+			currentMetadata = result.result.meta || {};
+		}
+		
+		// Update state.png metadata to completed status
+		const metadata = {
+			...currentMetadata,
+			session_status: 'completed',
+			ended_at: now,
+			last_updated: now
+		};
+		
+		const updateResponse = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/session-state`,
+			{
+				method: 'PATCH',
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					metadata: metadata
+				})
+			}
+		);
+		
+		if (!updateResponse.ok) {
+			const errorText = await updateResponse.text();
+			console.error('Failed to update state.png metadata:', updateResponse.status, errorText);
+			return c.json({ error: 'Failed to end session' }, 500);
+		}
+		
+		console.log('Session ended successfully');
+		return c.json({
+			success: true,
+			status: 'completed',
+			ended_at: now
+		});
+		
+	} catch (error) {
+		console.error('Error ending session:', error);
+		return c.json({ error: 'Failed to end session' }, 500);
 	}
 });
 

@@ -94,38 +94,9 @@ export function addImageToPage(url, prompt = '') {
 		console.log('🖨️ Skipping auto-print - URL is base64 or empty:', url?.substring(0, 50));
 	}
 	
-	// Just add a simple message to the existing content area
-	const contentDiv = document.querySelector('.content');
-	console.log('📝 Content div found:', !!contentDiv);
-	
-	if (contentDiv) {
-		// Create simple completion message
-		const completionMessage = document.createElement('div');
-		completionMessage.id = 'completion-message';
-		completionMessage.style.backgroundColor = 'rgba(255, 212, 0, 0.95)';
-		completionMessage.style.color = '#000';
-		completionMessage.style.padding = '20px 30px';
-		completionMessage.style.borderRadius = '12px';
-		completionMessage.style.textAlign = 'center';
-		completionMessage.style.fontSize = '18px';
-		completionMessage.style.fontWeight = '600';
-		completionMessage.style.fontFamily = 'Inter, sans-serif';
-		completionMessage.style.margin = '20px auto';
-		completionMessage.style.maxWidth = '500px';
-		completionMessage.style.boxShadow = '0 4px 20px rgba(255, 212, 0, 0.3)';
-		completionMessage.style.border = '2px solid #000';
-		completionMessage.innerHTML = '✨ <strong>Sua arte foi criada!</strong><br><span style="font-size: 16px; font-weight: 400;">Dirija-se à tela externa para ver e imprimir</span>';
-		
-		// Add to content div
-		contentDiv.appendChild(completionMessage);
-		console.log('✅ Completion message added to page');
-	} else {
-		console.error('❌ Content div not found - cannot add completion message');
-	}
-	
 	// Log that image was generated but not displayed on main screen
 	console.log('✅ Image generated successfully:', url);
-	console.log('📱 Simple completion message added - no overlay, original interface intact');
+	console.log('📱 Image generation completed - collection message already shown');
 	console.log('🖥️ Image available on external screen at /carousel.html?latest=true');
 	
 	
@@ -250,12 +221,26 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 	console.log('📷 Video element available:', !!videoElement);
 	console.log('📹 Camera stream available:', !!cameraStream);
 	
-	// Start the reset timer immediately when image generation begins
-	console.log('🚀 AUTO-RESET TIMEOUT STARTING NOW - 10 seconds until reset');
-	setTimeout(() => {
-		console.log('⏰ 10-second timeout reached - calling resetForNextUser()');
-		resetForNextUser();
-	}, 10000);
+	// End the current session immediately when image generation starts
+	console.log('🏁 Ending current session - calling /api/end-session');
+	try {
+		const endSessionResponse = await fetch('/api/end-session', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		});
+		
+		if (endSessionResponse.ok) {
+			console.log('✅ Session ended successfully');
+			// Show persistent collection message immediately
+			showCollectionMessage();
+		} else {
+			console.error('❌ Failed to end session:', endSessionResponse.status);
+		}
+	} catch (error) {
+		console.error('❌ Error ending session:', error);
+	}
 	
 	if (!prompt) {
 		throw new Error('prompt is required for image generation');
@@ -320,58 +305,44 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 }
 
 
-// Reset interface for next user
-export function resetForNextUser() {
-	console.log('🔄 resetForNextUser() called - starting interface reset');
+// Show persistent collection message (no auto-reload)
+export function showCollectionMessage() {
+	console.log('📢 showCollectionMessage() called - showing persistent collection message');
 	
-	// Remove any completion messages
-	const completionMessage = document.getElementById('completion-message');
-	if (completionMessage) {
-		completionMessage.remove();
-		console.log('🗑️ Completion message removed');
-	} else {
-		console.log('🗑️ No completion message found to remove');
+	// Remove any existing completion messages
+	const existingMessage = document.getElementById('completion-message');
+	if (existingMessage) {
+		existingMessage.remove();
+		console.log('🗑️ Existing completion message removed');
 	}
 	
-	// Restore main content div
+	// Create persistent collection message
 	const contentDiv = document.querySelector('.content');
 	if (contentDiv) {
-		contentDiv.style.display = 'flex';
-		console.log('📱 Content div display restored to flex');
+		const collectionMessage = document.createElement('div');
+		collectionMessage.id = 'collection-message';
+		collectionMessage.style.backgroundColor = 'rgba(255, 212, 0, 0.95)';
+		collectionMessage.style.color = '#000';
+		collectionMessage.style.padding = '30px 40px';
+		collectionMessage.style.borderRadius = '12px';
+		collectionMessage.style.textAlign = 'center';
+		collectionMessage.style.fontSize = '20px';
+		collectionMessage.style.fontWeight = '600';
+		collectionMessage.style.fontFamily = 'Inter, sans-serif';
+		collectionMessage.style.margin = '20px auto';
+		collectionMessage.style.maxWidth = '600px';
+		collectionMessage.style.boxShadow = '0 4px 20px rgba(255, 212, 0, 0.3)';
+		collectionMessage.style.border = '2px solid #000';
+		collectionMessage.innerHTML = '🎨 <strong>Sua arte está sendo criada!</strong><br><span style="font-size: 18px; font-weight: 400; margin-top: 10px; display: block;">Vá para a tela externa buscar sua obra de arte personalizada</span>';
+		
+		// Add to content div
+		contentDiv.appendChild(collectionMessage);
+		console.log('✅ Persistent collection message added to page');
 	} else {
-		console.error('❌ Content div not found during reset');
+		console.error('❌ Content div not found - cannot add collection message');
 	}
 	
-	// Remove any session messages
-	const existingMessages = document.querySelectorAll('[data-session-message]');
-	console.log('🗑️ Found', existingMessages.length, 'existing session messages to remove');
-	existingMessages.forEach(msg => msg.remove());
-	
-	// Show reset message briefly
-	console.log('📢 Creating reset notification message');
-	const resetMessage = document.createElement('div');
-	resetMessage.setAttribute('data-session-message', 'true');
-	resetMessage.style.position = 'fixed';
-	resetMessage.style.top = '20px';
-	resetMessage.style.left = '50%';
-	resetMessage.style.transform = 'translateX(-50%)';
-	resetMessage.style.backgroundColor = 'rgba(0, 180, 216, 0.9)';
-	resetMessage.style.color = '#fff';
-	resetMessage.style.padding = '10px 20px';
-	resetMessage.style.borderRadius = '8px';
-	resetMessage.style.fontSize = '14px';
-	resetMessage.style.fontWeight = '600';
-	resetMessage.style.zIndex = '9999';
-	resetMessage.style.backdropFilter = 'blur(10px)';
-	resetMessage.textContent = 'Pronto para o próximo usuário';
-	document.body.appendChild(resetMessage);
-	console.log('📢 Reset notification message added to page');
-	
-	// Reload the page after showing the reset message to fully reset the WebRTC connection
-	setTimeout(() => {
-		console.log('🔄 Reloading page to fully reset WebRTC connection and interface');
-		window.location.reload();
-	}, 1500); // Give time to see the reset message
+	console.log('📱 Session completed - showing persistent message (no reload)');
 }
 
 // WebRTC connection management
