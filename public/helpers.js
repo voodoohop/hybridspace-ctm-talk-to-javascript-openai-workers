@@ -653,6 +653,7 @@ export function addDebugNavButtons() {
 	buttons.forEach(({ text, url, color }) => {
 		const button = document.createElement('a');
 		button.href = url;
+		button.target = '_blank';
 		button.textContent = text;
 		button.style.display = 'block';
 		button.style.padding = '8px 16px';
