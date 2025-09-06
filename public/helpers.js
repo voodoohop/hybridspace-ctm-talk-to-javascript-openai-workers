@@ -451,6 +451,7 @@ export function closeConnection(peerConnection, connectionTimeout) {
 		
 		// Show closure message in place of audio element
 		const messageDiv = document.createElement('div');
+		messageDiv.id = 'session-timeout-message'; // Add ID for cleanup
 		messageDiv.style.display = 'block';
 		messageDiv.style.margin = '15px auto';
 		messageDiv.style.maxWidth = '400px';
@@ -630,5 +631,57 @@ export function addSessionResetButton() {
 	};
 	
 	document.body.appendChild(resetButton);
+}
+
+// Add debug navigation buttons for development
+export function addDebugNavButtons() {
+	const buttonContainer = document.createElement('div');
+	buttonContainer.style.position = 'fixed';
+	buttonContainer.style.bottom = '15px';
+	buttonContainer.style.right = '15px';
+	buttonContainer.style.display = 'flex';
+	buttonContainer.style.flexDirection = 'column';
+	buttonContainer.style.gap = '10px';
+	buttonContainer.style.zIndex = '9998';
+
+	const buttons = [
+		{ text: 'GALLERY', url: '/gallery.html', color: '#00B4D8' },
+		{ text: 'ADMIN', url: '/admin.html', color: '#FFD400' },
+		{ text: 'CAROUSEL', url: '/carousel.html', color: '#00FF88' }
+	];
+
+	buttons.forEach(({ text, url, color }) => {
+		const button = document.createElement('a');
+		button.href = url;
+		button.textContent = text;
+		button.style.display = 'block';
+		button.style.padding = '8px 16px';
+		button.style.background = `linear-gradient(135deg, ${color}, ${color}dd)`;
+		button.style.color = color === '#FFD400' ? '#000' : '#fff';
+		button.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+		button.style.borderRadius = '8px';
+		button.style.textDecoration = 'none';
+		button.style.fontWeight = '600';
+		button.style.fontFamily = 'Inter, sans-serif';
+		button.style.fontSize = '12px';
+		button.style.textAlign = 'center';
+		button.style.cursor = 'pointer';
+		button.style.transition = 'all 0.2s ease';
+		button.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+
+		// Hover effects
+		button.onmouseenter = () => {
+			button.style.transform = 'translateY(-1px)';
+			button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+		};
+		button.onmouseleave = () => {
+			button.style.transform = 'translateY(0)';
+			button.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
+		};
+
+		buttonContainer.appendChild(button);
+	});
+
+	document.body.appendChild(buttonContainer);
 }
 

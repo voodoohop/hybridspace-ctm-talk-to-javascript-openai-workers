@@ -1,5 +1,5 @@
 // Import helper functions
-import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton, addSessionResetButton } from './helpers.js';
+import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton, addSessionResetButton, addDebugNavButtons } from './helpers.js';
 
 // Global camera state - accessible to test functions
 let cameraStream = null;
@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		
 		// Add debug session reset button
 		addSessionResetButton();
+		
+		// Add debug navigation buttons
+		addDebugNavButtons();
 		
 		// Start session polling
 		startSessionPolling();
@@ -133,6 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (completionMessage) {
 			completionMessage.remove();
 			console.log('🗑️ Completion message cleared for new session');
+		}
+		
+		// Clear session timeout message for new session
+		const timeoutMessage = document.getElementById('session-timeout-message');
+		if (timeoutMessage) {
+			timeoutMessage.remove();
+			console.log('🗑️ Session timeout message cleared for new session');
 		}
 		
 		// Reinitialize WebRTC
