@@ -49,14 +49,21 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Initialize WebRTC on first load
 	initializeWebRTC();
 
-	// Session polling function
+	// Session polling function with simple backoff
+	let pollInterval = 7000; // Start with 7 seconds
 	async function checkSessionState() {
 		try {
 			const response = await fetch('/api/session-state');
 			if (!response.ok) {
 				console.error('Failed to fetch session state:', response.status);
+				// Simple backoff: double interval on error, max 30 seconds
+				pollInterval = Math.min(pollInterval * 2, 30000);
+				console.log(`Backing off polling to ${pollInterval}ms`);
 				return;
 			}
+			
+			// Reset interval on success
+			pollInterval = 7000;
 			
 			const sessionState = await response.json();
 			console.log('Session state:', sessionState);
@@ -80,17 +87,28 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 		} catch (error) {
 			console.error('Error checking session state:', error);
+			// Simple backoff on network errors too
+			pollInterval = Math.min(pollInterval * 2, 30000);
+			console.log(`Backing off polling to ${pollInterval}ms`);
 		}
 	}
 	
 	function startSessionPolling() {
-		console.log('🔄 Starting session polling (every 3 seconds)');
+		console.log('🔄 Starting session polling (every 7 seconds with backoff)');
 		
 		// Initial check
 		checkSessionState();
 		
-		// Poll every 3 seconds
-		sessionPollingInterval = setInterval(checkSessionState, 3000);
+		// Dynamic polling with backoff
+		function scheduleNextPoll() {
+			sessionPollingInterval = setTimeout(() => {
+				checkSessionState().then(() => {
+					scheduleNextPoll();
+				});
+			}, pollInterval);
+		}
+		
+		scheduleNextPoll();
 	}
 
 	const fns = {

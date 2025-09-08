@@ -24,7 +24,7 @@ Naturally discover: **Location** (local/visitor), **Mood** (emotional state), **
 ### 3. Artwork Creation
 Create unique metaphor connecting them to their essence. Describe what their energy inspired, incorporating mood/colors, location, art preferences, life moment, and energy source. Make it personal and meaningful.
 
-**MANDATORY**: Call generateImage function with detailed prompt based on their answers. Vary your transition phrase naturally, mention wait time (45-60 seconds), then ONLY AFTER calling generateImage give PERSONALIZED ArtRio recommendations during the generation wait time.
+**MANDATORY**: Call generateImage function with detailed prompt based on their answers. Vary your transition phrase naturally, mention wait time (45-60 seconds), then IMMEDIATELY tell them to leave and pick up their printed artwork outside. Say something like "Agora vá lá fora buscar sua obra de arte impressa!" Then ONLY AFTER that give PERSONALIZED ArtRio recommendations during the generation wait time.
 
 **IMPORTANT - Image Prompt Guidelines**: 
 - NEVER use specific artist names in image generation prompts (e.g., avoid "like Picasso", "in the style of Van Gogh")
@@ -117,75 +117,93 @@ app.post('/rtc-connect', async (c) => {
 // Base instructions appended to all prompts
 const BASE_PROMPT_INSTRUCTIONS = " - PRESERVE THE PERSON'S EXACT FACIAL FEATURES, eye shape, nose structure, mouth, and facial proportions identically from the original photo. Maintain their unique facial identity completely unchanged. However, optimize their pose and expression for the artwork - ensure eyes are open and alert, head positioning is flattering, and expression shows genuine joy and confidence. Use the reference image examples to guide the artistic style, composition, and PRIO branding elements. Choose one of the three style approaches shown in the reference: (1) industrial urban collage with warm tones, (2) vibrant pop art with geometric elements, or (3) clean illustration with nature/city elements. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈3.5% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.";
 
-// Helper function to make a single Azure API call
-const makeSingleAzureApiCall = async (azureFormData: FormData, azureApiUrl: string, apiKey: string, attemptNumber: number, promptOverride?: string): Promise<any> => {
-	console.log(`🌐 Making Azure OpenAI API request (attempt ${attemptNumber})...`);
+// Helper function to make Azure API call with safety fallback
+const makeAzureApiCallWithSafetyFallback = async (azureFormData: FormData, azureApiUrl: string, apiKey: string): Promise<any> => {
+	console.log('🌐 Making Azure OpenAI API request...');
 	
-	// Clone the FormData if we need to override the prompt
-	let finalFormData = azureFormData;
-	let finalPrompt = '';
-	
-	if (promptOverride) {
-		console.log(`🛡️ Using safe fallback prompt for attempt ${attemptNumber}`);
-		finalPrompt = promptOverride + BASE_PROMPT_INSTRUCTIONS;
-		console.log(`📋 Attempt ${attemptNumber} prompt preview:`, finalPrompt.substring(0, 150) + '...');
-		
-		// Simple approach: just set the prompt field directly
-		finalFormData = new FormData();
-		
-		// Copy all fields, replacing prompt if needed
-		for (const [key, value] of azureFormData.entries()) {
-			if (key === 'prompt') {
-				finalFormData.append('prompt', finalPrompt);
-			} else {
-				if (value instanceof File) {
-					finalFormData.append(key, value, value.name);
-				} else {
-					finalFormData.append(key, value as string);
-				}
-			}
+	// Get the original prompt for logging
+	let originalPrompt = '';
+	for (const [key, value] of azureFormData.entries()) {
+		if (key === 'prompt') {
+			originalPrompt = value as string;
+			break;
 		}
-	} else {
-		// Get the original prompt for logging
-		for (const [key, value] of azureFormData.entries()) {
-			if (key === 'prompt') {
-				finalPrompt = value as string;
-				break;
-			}
-		}
-		console.log(`📋 Attempt ${attemptNumber} prompt preview:`, finalPrompt.substring(0, 150) + '...');
 	}
+	console.log('📋 Original prompt preview:', originalPrompt.substring(0, 150) + '...');
 
-	console.log(`📤 Sending request to Azure (attempt ${attemptNumber})...`);
-	const azureResponse = await fetch(azureApiUrl, {
+	// First attempt with original prompt
+	console.log('📤 Sending request to Azure (attempt 1)...');
+	let azureResponse = await fetch(azureApiUrl, {
 		method: 'POST',
 		headers: {
 			'api-key': apiKey,
 		},
-		body: finalFormData,
+		body: azureFormData,
 	});
 	
-	console.log(`📥 Azure API response received (attempt ${attemptNumber}):`, {
+	console.log('📥 Azure API response received (attempt 1):', {
 		status: azureResponse.status,
 		statusText: azureResponse.statusText,
 		headers: Object.fromEntries(azureResponse.headers.entries())
 	});
 
+	// Check for any error and retry with safe prompt
 	if (!azureResponse.ok) {
 		const errorText = await azureResponse.text();
-		const errorData = {
+		console.log('❌ First attempt failed - retrying with safe fallback prompt for any error type');
+		
+		// Create safe fallback prompt for any error
+		const safeFallbackPrompt = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Sugarloaf Mountain. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood." + BASE_PROMPT_INSTRUCTIONS;
+		
+		// Create new FormData with safe prompt
+		const safeFormData = new FormData();
+		for (const [key, value] of azureFormData.entries()) {
+			if (key === 'prompt') {
+				safeFormData.append('prompt', safeFallbackPrompt);
+			} else {
+				if (value instanceof File) {
+					safeFormData.append(key, value, value.name);
+				} else {
+					safeFormData.append(key, value as string);
+				}
+			}
+		}
+		
+		console.log('📋 Safe fallback prompt preview:', safeFallbackPrompt.substring(0, 150) + '...');
+		console.log('📤 Sending request to Azure (attempt 2 - safe prompt)...');
+		
+		// Second attempt with safe prompt
+		azureResponse = await fetch(azureApiUrl, {
+			method: 'POST',
+			headers: {
+				'api-key': apiKey,
+			},
+			body: safeFormData,
+		});
+		
+		console.log('📥 Azure API response received (attempt 2 - safe prompt):', {
 			status: azureResponse.status,
 			statusText: azureResponse.statusText,
-			body: errorText,
-			attempt: attemptNumber
-		};
+			headers: Object.fromEntries(azureResponse.headers.entries())
+		});
 		
-		console.error(`Azure OpenAI Image Edit API error (attempt ${attemptNumber}):`, errorData);
-		throw new Error(JSON.stringify(errorData));
+		if (!azureResponse.ok) {
+			const safeErrorText = await azureResponse.text();
+			const errorData = {
+				status: azureResponse.status,
+				statusText: azureResponse.statusText,
+				body: safeErrorText,
+				attempt: 2,
+				type: 'safe_fallback_failed',
+				originalError: errorText
+			};
+			console.error('❌ Safe fallback also failed:', errorData);
+			throw new Error(JSON.stringify(errorData));
+		}
 	}
 
 	const result: any = await azureResponse.json();
-	console.log(`✅ Azure OpenAI image edited successfully (attempt ${attemptNumber}):`, {
+	console.log('✅ Azure OpenAI image edited successfully:', {
 		hasData: !!result.data,
 		dataLength: result.data?.length,
 		hasB64Json: !!(result.data?.[0]?.b64_json),
@@ -193,68 +211,6 @@ const makeSingleAzureApiCall = async (azureFormData: FormData, azureApiUrl: stri
 	});
 	
 	return result;
-};
-
-// Helper function to make 3 staggered Azure API calls and return first success
-const makeStaggeredAzureApiCalls = async (azureFormData: FormData, azureApiUrl: string, apiKey: string): Promise<any> => {
-	console.log('🚀 Starting 3 staggered Azure OpenAI API requests (15s intervals, running in parallel)...');
-	
-	// Create safe fallback prefix for third attempt (will be combined with base instructions)
-	const safeFallbackPrefix = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Sugarloaf Mountain. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood.";
-	
-	// Start all requests with staggered timing but running in parallel
-	const request1 = makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 1);
-	
-	// Start second request after 15 seconds
-	const request2 = new Promise<any>((resolve, reject) => {
-		setTimeout(async () => {
-			console.log('⏰ Starting request 2 after 15 second delay...');
-			try {
-				const result = await makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 2);
-				resolve(result);
-			} catch (error) {
-				reject(error);
-			}
-		}, 15000);
-	});
-	
-	// Start third request after 30 seconds with safe fallback prompt
-	const request3 = new Promise<any>((resolve, reject) => {
-		setTimeout(async () => {
-			console.log('⏰ Starting request 3 (safe prompt) after 30 second delay...');
-			try {
-				const result = await makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 3, safeFallbackPrefix);
-				resolve(result);
-			} catch (error) {
-				reject(error);
-			}
-		}, 30000);
-	});
-	
-	const requests = [request1, request2, request3];
-	
-	try {
-		// Use Promise.race to return the first successful result
-		const result = await Promise.race(requests);
-		console.log('🏆 First successful response received from staggered requests');
-		return result;
-	} catch (error) {
-		// If the first promise rejects, try Promise.allSettled to see if any succeeded
-		console.log('⚠️ First request failed, checking all staggered requests...');
-		const results = await Promise.allSettled(requests);
-		
-		// Find the first successful result
-		for (const result of results) {
-			if (result.status === 'fulfilled') {
-				console.log('✅ Found successful result from staggered requests');
-				return result.value;
-			}
-		}
-		
-		// If all failed, throw the first error
-		const firstError = results.find(r => r.status === 'rejected')?.reason;
-		throw firstError || new Error('All staggered requests failed');
-	}
 };
 
 const azureImageEdit = async (c: Context) => {
@@ -393,14 +349,14 @@ const azureImageEdit = async (c: Context) => {
 			totalFormFields: Array.from(azureFormData.keys()).length
 		});
 
-		// Make 3 staggered Azure API calls and use first success
+		// Make Azure API call with safety fallback
 		let result: any;
 		try {
-			result = await makeStaggeredAzureApiCalls(azureFormData, azureApiUrl, c.env.AZURE_OPENAI_API_KEY);
+			result = await makeAzureApiCallWithSafetyFallback(azureFormData, azureApiUrl, c.env.AZURE_OPENAI_API_KEY);
 		} catch (error: any) {
 			const errorData = JSON.parse(error.message);
 			return c.json({
-				error: 'Failed to edit image with Azure OpenAI - all 3 staggered attempts failed',
+				error: 'Failed to edit image with Azure OpenAI',
 				details: errorData
 			}, 500);
 		}

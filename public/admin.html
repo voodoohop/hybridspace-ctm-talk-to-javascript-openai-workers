@@ -279,9 +279,9 @@
             updateSessionStatus();
             loadImages();
             
-            // Start polling
-            sessionPollingInterval = setInterval(updateSessionStatus, 3000);
-            imagesPollingInterval = setInterval(loadImages, 5000);
+            // Start polling with slower intervals
+            sessionPollingInterval = setInterval(updateSessionStatus, 7000);
+            imagesPollingInterval = setInterval(loadImages, 10000);
         });
 
         // Session management
