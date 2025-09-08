@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	// WebRTC reset function
-	function resetWebRTCConnection() {
+	async function resetWebRTCConnection() {
 		console.log('🔄 Resetting WebRTC connection for new session');
 		
 		// Close existing connection if it exists
@@ -119,6 +119,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Stop existing audio stream
 		if (audioStream) {
 			audioStream.getTracks().forEach(track => track.stop());
+		}
+		
+		// Stop existing camera stream
+		if (cameraStream) {
+			cameraStream.getTracks().forEach(track => track.stop());
+			console.log('🎥 Camera stream stopped for reset');
+		}
+		
+		// Remove existing video element
+		if (videoElement) {
+			videoElement.remove();
+			console.log('🗑️ Video element removed for reset');
 		}
 		
 		// Remove existing audio elements
@@ -143,6 +155,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (timeoutMessage) {
 			timeoutMessage.remove();
 			console.log('🗑️ Session timeout message cleared for new session');
+		}
+		
+		// Reinitialize camera for fresh session
+		try {
+			const cameraResult = await initializeCamera();
+			cameraStream = cameraResult.cameraStream;
+			videoElement = cameraResult.videoElement;
+			console.log('🎥 Camera reinitialized for new session');
+		} catch (error) {
+			console.error('❌ Failed to reinitialize camera:', error);
 		}
 		
 		// Reinitialize WebRTC
@@ -217,16 +239,16 @@ document.addEventListener('DOMContentLoaded', () => {
 					modalities: ['text', 'audio'],
 					turn_detection: {
 						type: 'server_vad',
-						threshold: 0.5,              // Less sensitive (higher threshold)
-						prefix_padding_ms: 1000,     // More padding for longer pause
-						silence_duration_ms: 2000,   // Longer wait time before responding
+						threshold: 0.3,              // More sensitive (lower threshold)
+						prefix_padding_ms: 300,     // Less padding for quicker response
+						silence_duration_ms: 800,   // Shorter wait time before responding
 						create_response: true
 					},
 					tools: [
 						{
 							type: 'function',
 							name: 'generateImage',
-							description: 'Generate an image using Azure OpenAI GPT-image-1',
+							description: 'Generate an image using Azure OpenAI GPT-image-1. You cannot use this function without first informing the user about your intention to call it. Only after writing to the user do you automatically invoke the tool in the same response output creation.',
 							parameters: {
 								type: 'object',
 								properties: {
@@ -257,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		dataChannel.addEventListener('message', async (ev) => {
 			try {
 				const msg = JSON.parse(ev.data);
-				console.log('Received message:', msg);
+				console.log('📨 Received WebRTC message:', msg.type, msg);
 
 				// Handle function calls
 				if (msg.type === 'response.function_call_arguments.done') {

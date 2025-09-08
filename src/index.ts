@@ -6,7 +6,7 @@ const app = new Hono<{ Bindings: Env }>();
 const DEFAULT_INSTRUCTIONS = `# System Prompt for Prio - Digital Artist AI
 
 ## Current Context
-**Date**: August 29, 2025 | **Location**: ArtRio 2025 at Marina da Glória | **Event**: September 10-14, 2025
+**Date**: September 7, 2025 | **Location**: ArtRio 2025 at Marina da Glória | **Event**: September 10-14, 2025
 
 ## Character Identity
 You are **Prio**, a charming Carioca digital artist embodying PRIO's innovative spirit. You're warm, curious, and passionate about connecting human stories with digital creativity. Core traits: welcoming like a Rio friend, curious explorer, creative visionary, and innovative pioneer representing Brazil's leading energy company.
@@ -70,30 +70,192 @@ app.get('/instructions', async (c) => {
 });
 
 app.post('/rtc-connect', async (c) => {
-	const body = await c.req.text();
-	const url = new URL('https://api.openai.com/v1/realtime');
-	url.searchParams.set('model', 'gpt-realtime');
-
-	const response = await fetch(url.toString(), {
-		method: 'POST',
-		body,
-		headers: {
-			Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
-			'Content-Type': 'application/sdp',
-		},
-	});
-
-	if (!response.ok) {
-		throw new Error(`OpenAI API error: ${response.status}`);
+	console.log('🔌 /rtc-connect called - establishing WebRTC connection to OpenAI');
+	
+	try {
+		const body = await c.req.text();
+		console.log('📤 SDP offer received, length:', body.length);
+		
+		const url = new URL('https://api.openai.com/v1/realtime');
+		url.searchParams.set('model', 'gpt-realtime');
+		
+		console.log('🌐 Making request to OpenAI Realtime API:', url.toString());
+		
+		const response = await fetch(url.toString(), {
+			method: 'POST',
+			body,
+			headers: {
+				Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
+				'Content-Type': 'application/sdp',
+			},
+		});
+		
+		console.log('📥 OpenAI Realtime API response:', response.status, response.statusText);
+		
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error('❌ OpenAI Realtime API error:', response.status, errorText);
+			throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+		}
+		
+		const sdp = await response.text();
+		console.log('✅ SDP answer received from OpenAI, length:', sdp.length);
+		
+		return c.body(sdp, {
+			headers: {
+				'Content-Type': 'application/sdp',
+			},
+		});
+		
+	} catch (error: any) {
+		console.error('💥 Error in /rtc-connect:', error);
+		return c.json({ error: error.message }, 500);
 	}
-	const sdp = await response.text();
-	return c.body(sdp, {
-		headers: {
-			'Content-Type': 'application/sdp',
-		},
-	});
 });
 
+
+// Base instructions appended to all prompts
+const BASE_PROMPT_INSTRUCTIONS = " - PRESERVE THE PERSON'S EXACT FACIAL FEATURES, eye shape, nose structure, mouth, and facial proportions identically from the original photo. Maintain their unique facial identity completely unchanged. However, optimize their pose and expression for the artwork - ensure eyes are open and alert, head positioning is flattering, and expression shows genuine joy and confidence. Use the reference image examples to guide the artistic style, composition, and PRIO branding elements. Choose one of the three style approaches shown in the reference: (1) industrial urban collage with warm tones, (2) vibrant pop art with geometric elements, or (3) clean illustration with nature/city elements. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈3.5% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.";
+
+// Helper function to make a single Azure API call
+const makeSingleAzureApiCall = async (azureFormData: FormData, azureApiUrl: string, apiKey: string, attemptNumber: number, promptOverride?: string): Promise<any> => {
+	console.log(`🌐 Making Azure OpenAI API request (attempt ${attemptNumber})...`);
+	
+	// Clone the FormData if we need to override the prompt
+	let finalFormData = azureFormData;
+	let finalPrompt = '';
+	
+	if (promptOverride) {
+		console.log(`🛡️ Using safe fallback prompt for attempt ${attemptNumber}`);
+		finalPrompt = promptOverride + BASE_PROMPT_INSTRUCTIONS;
+		console.log(`📋 Attempt ${attemptNumber} prompt preview:`, finalPrompt.substring(0, 150) + '...');
+		
+		// Simple approach: just set the prompt field directly
+		finalFormData = new FormData();
+		
+		// Copy all fields, replacing prompt if needed
+		for (const [key, value] of azureFormData.entries()) {
+			if (key === 'prompt') {
+				finalFormData.append('prompt', finalPrompt);
+			} else {
+				if (value instanceof File) {
+					finalFormData.append(key, value, value.name);
+				} else {
+					finalFormData.append(key, value as string);
+				}
+			}
+		}
+	} else {
+		// Get the original prompt for logging
+		for (const [key, value] of azureFormData.entries()) {
+			if (key === 'prompt') {
+				finalPrompt = value as string;
+				break;
+			}
+		}
+		console.log(`📋 Attempt ${attemptNumber} prompt preview:`, finalPrompt.substring(0, 150) + '...');
+	}
+
+	console.log(`📤 Sending request to Azure (attempt ${attemptNumber})...`);
+	const azureResponse = await fetch(azureApiUrl, {
+		method: 'POST',
+		headers: {
+			'api-key': apiKey,
+		},
+		body: finalFormData,
+	});
+	
+	console.log(`📥 Azure API response received (attempt ${attemptNumber}):`, {
+		status: azureResponse.status,
+		statusText: azureResponse.statusText,
+		headers: Object.fromEntries(azureResponse.headers.entries())
+	});
+
+	if (!azureResponse.ok) {
+		const errorText = await azureResponse.text();
+		const errorData = {
+			status: azureResponse.status,
+			statusText: azureResponse.statusText,
+			body: errorText,
+			attempt: attemptNumber
+		};
+		
+		console.error(`Azure OpenAI Image Edit API error (attempt ${attemptNumber}):`, errorData);
+		throw new Error(JSON.stringify(errorData));
+	}
+
+	const result: any = await azureResponse.json();
+	console.log(`✅ Azure OpenAI image edited successfully (attempt ${attemptNumber}):`, {
+		hasData: !!result.data,
+		dataLength: result.data?.length,
+		hasB64Json: !!(result.data?.[0]?.b64_json),
+		b64JsonLength: result.data?.[0]?.b64_json?.length
+	});
+	
+	return result;
+};
+
+// Helper function to make 3 staggered Azure API calls and return first success
+const makeStaggeredAzureApiCalls = async (azureFormData: FormData, azureApiUrl: string, apiKey: string): Promise<any> => {
+	console.log('🚀 Starting 3 staggered Azure OpenAI API requests (15s intervals, running in parallel)...');
+	
+	// Create safe fallback prefix for third attempt (will be combined with base instructions)
+	const safeFallbackPrefix = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Sugarloaf Mountain. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood.";
+	
+	// Start all requests with staggered timing but running in parallel
+	const request1 = makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 1);
+	
+	// Start second request after 15 seconds
+	const request2 = new Promise<any>((resolve, reject) => {
+		setTimeout(async () => {
+			console.log('⏰ Starting request 2 after 15 second delay...');
+			try {
+				const result = await makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 2);
+				resolve(result);
+			} catch (error) {
+				reject(error);
+			}
+		}, 15000);
+	});
+	
+	// Start third request after 30 seconds with safe fallback prompt
+	const request3 = new Promise<any>((resolve, reject) => {
+		setTimeout(async () => {
+			console.log('⏰ Starting request 3 (safe prompt) after 30 second delay...');
+			try {
+				const result = await makeSingleAzureApiCall(azureFormData, azureApiUrl, apiKey, 3, safeFallbackPrefix);
+				resolve(result);
+			} catch (error) {
+				reject(error);
+			}
+		}, 30000);
+	});
+	
+	const requests = [request1, request2, request3];
+	
+	try {
+		// Use Promise.race to return the first successful result
+		const result = await Promise.race(requests);
+		console.log('🏆 First successful response received from staggered requests');
+		return result;
+	} catch (error) {
+		// If the first promise rejects, try Promise.allSettled to see if any succeeded
+		console.log('⚠️ First request failed, checking all staggered requests...');
+		const results = await Promise.allSettled(requests);
+		
+		// Find the first successful result
+		for (const result of results) {
+			if (result.status === 'fulfilled') {
+				console.log('✅ Found successful result from staggered requests');
+				return result.value;
+			}
+		}
+		
+		// If all failed, throw the first error
+		const firstError = results.find(r => r.status === 'rejected')?.reason;
+		throw firstError || new Error('All staggered requests failed');
+	}
+};
 
 const azureImageEdit = async (c: Context) => {
 	console.log('🎨 /edit-image endpoint called - starting image generation process');
@@ -198,55 +360,50 @@ const azureImageEdit = async (c: Context) => {
 		// Create form data for Azure API
 		const azureFormData = new FormData();
 		azureFormData.append('image[]', imageFile);
-		azureFormData.append('prompt', prompt + " - 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈3.5% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Portray the person has happy confident and attractive - show genuine joy. Create an idealized but authentic version that they will love and want to share.  Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.");
-
-		// Render in one of three style modes while preserving this layout: (A) painterly realist with visible impasto arcs and soft atmospheric depth, warm pastel/neutral palette; (B) graphic pop-vector with saturated flat shapes, gradients, splatter decals and swoosh lines, high contrast; (C) cel-shaded comic/ligne-claire with clean linework, broad flat fills (1–2 shade steps), teal/green sunlit cast.
-
+		
+		// Add reference image for style guidance
+		try {
+			// Always use production URL for now since local serving has issues
+			const referenceImageUrl = 'https://prio-conception.thomash-efd.workers.dev/prioreference.jpeg';
+			console.log(`🔍 Fetching reference image from: ${referenceImageUrl}`);
+			
+			const referenceResponse = await fetch(referenceImageUrl);
+			if (referenceResponse.ok) {
+				const referenceBlob = await referenceResponse.blob();
+				azureFormData.append('image[]', referenceBlob, 'prioreference.jpeg');
+				console.log('✅ Reference image added to form data');
+			} else {
+				console.warn(`⚠️ Could not load reference image (${referenceResponse.status}), proceeding without it`);
+			}
+		} catch (error) {
+			console.warn('⚠️ Error loading reference image:', error);
+		}
+		
+		azureFormData.append('prompt', prompt + BASE_PROMPT_INSTRUCTIONS);
 		azureFormData.append('model', 'gpt-image-1');
 		azureFormData.append('size', size);
 		azureFormData.append('quality', 'high');
 		azureFormData.append('n', '1');
 
-		console.log('🌐 Making Azure OpenAI API request...');
-		console.log('📤 Azure API URL: https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview');
-		console.log('📤 Request headers:', { 'api-key': c.env.AZURE_OPENAI_API_KEY ? '[PRESENT]' : '[MISSING]' });
-		
-		// Azure OpenAI image edit request
-		const azureResponse = await fetch(
-			`https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview`,
-			{
-				method: 'POST',
-				headers: {
-					'api-key': c.env.AZURE_OPENAI_API_KEY,
-				},
-				body: azureFormData
-			}
-		);
-		
-		console.log('📥 Azure API response received:', {
-			status: azureResponse.status,
-			statusText: azureResponse.statusText,
-			headers: Object.fromEntries(azureResponse.headers.entries())
+		const azureApiUrl = `https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview`;
+
+		console.log('📤 Form data size estimate:', {
+			imageFileSize: imageFile.size,
+			promptLength: prompt.length,
+			totalFormFields: Array.from(azureFormData.keys()).length
 		});
 
-		if (!azureResponse.ok) {
-			const errorText = await azureResponse.text();
-			console.error('Azure OpenAI Image Edit API error:', {
-				status: azureResponse.status,
-				statusText: azureResponse.statusText,
-				body: errorText
-			});
+		// Make 3 staggered Azure API calls and use first success
+		let result: any;
+		try {
+			result = await makeStaggeredAzureApiCalls(azureFormData, azureApiUrl, c.env.AZURE_OPENAI_API_KEY);
+		} catch (error: any) {
+			const errorData = JSON.parse(error.message);
 			return c.json({
-				error: 'Failed to edit image with Azure OpenAI',
-				details: {
-					status: azureResponse.status,
-					statusText: azureResponse.statusText,
-					body: errorText
-				}
+				error: 'Failed to edit image with Azure OpenAI - all 3 staggered attempts failed',
+				details: errorData
 			}, 500);
 		}
-
-		const result: any = await azureResponse.json();
 		console.log('Azure OpenAI image edited successfully:', {
 			hasData: !!result.data,
 			dataLength: result.data?.length,
@@ -425,7 +582,6 @@ app.get('/api/gallery', async (c) => {
 			.map((img: any) => ({
 				id: img.id,
 				url: `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${img.id}/public`,
-				thumbnail: `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${img.id}/public`,
 				uploaded: img.uploaded,
 				metadata: img.meta || {}
 			}))
@@ -444,7 +600,7 @@ app.get('/api/gallery', async (c) => {
 });
 
 // Delete image endpoint
-app.delete('/api/gallery/:id', async (c) => {
+app.delete('/api/delete-image/:id', async (c) => {
 	try {
 		const imageId = c.req.param('id');
 		

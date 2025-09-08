@@ -249,8 +249,8 @@ export function setupLogoAnimation(audioStream) {
 
 
 // Generate image function
-export async function generateImage({ prompt, width = 1024, height = 1024 }, videoElement, cameraStream) {
-	console.log('🎬 generateImage() called with params:', { prompt: prompt.substring(0, 50) + '...', width, height });
+export async function generateImage({ prompt: userPrompt, width = 1024, height = 1024 }, videoElement, cameraStream) {
+	console.log('🎬 generateImage() called with params:', { prompt: userPrompt.substring(0, 50) + '...', width, height });
 	console.log('📷 Video element available:', !!videoElement);
 	console.log('📹 Camera stream available:', !!cameraStream);
 	
@@ -267,7 +267,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		if (endSessionResponse.ok) {
 			console.log('✅ Session ended successfully');
 			// Show persistent collection message immediately
-			showCollectionMessage();
+			showCollectionMessage(userPrompt);
 		} else {
 			console.error('❌ Failed to end session:', endSessionResponse.status);
 		}
@@ -275,7 +275,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		console.error('❌ Error ending session:', error);
 	}
 	
-	if (!prompt) {
+	if (!userPrompt) {
 		throw new Error('prompt is required for image generation');
 	}
 	
@@ -300,7 +300,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		}
 		
 		console.log('🌐 Sending image generation request with params:', {
-			prompt, width, height, hasPhoto: !!photoBlob
+			prompt: userPrompt, width, height, hasPhoto: !!photoBlob
 		});
 		
 		// In controlled environment, camera is always available - no fallback needed
@@ -311,7 +311,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 		console.log('📤 Using photo edit API with captured photo');
 		const formData = new FormData();
 		formData.append('image', photoBlob, 'photo.jpg');
-		formData.append('prompt', prompt);
+		formData.append('prompt', userPrompt);
 		formData.append('size', '1024x1536');
 		
 		// First test if server is responding
@@ -376,7 +376,7 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 			throw new Error(result.error || 'Failed to generate personalized image');
 		}
 		
-		addImageToPage(result.output, prompt);
+		addImageToPage(result.output, userPrompt);
 		
 		return { success: true, output: result.output };
 	} catch (error) {
@@ -389,8 +389,9 @@ export async function generateImage({ prompt, width = 1024, height = 1024 }, vid
 
 
 // Show persistent collection message (no auto-reload)
-export function showCollectionMessage() {
+export function showCollectionMessage(userPrompt = '') {
 	console.log('📢 showCollectionMessage() called - showing persistent collection message');
+	console.log('📢 Received prompt:', userPrompt ? userPrompt.substring(0, 50) + '...' : 'No prompt provided');
 	
 	// Remove any existing completion messages
 	const existingMessage = document.getElementById('completion-message');
@@ -416,7 +417,8 @@ export function showCollectionMessage() {
 		collectionMessage.style.maxWidth = '600px';
 		collectionMessage.style.boxShadow = '0 4px 20px rgba(255, 212, 0, 0.3)';
 		collectionMessage.style.border = '2px solid #000';
-		collectionMessage.innerHTML = '🎨 <strong>Sua arte está sendo criada!</strong><br><span style="font-size: 18px; font-weight: 400; margin-top: 10px; display: block;">Vá para a tela externa buscar sua obra de arte personalizada</span>';
+		const promptDisplay = userPrompt ? `<div style="font-size: 14px; font-weight: 400; margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; text-align: left; line-height: 1.4;"><strong>Prompt:</strong> ${userPrompt}</div>` : '';
+		collectionMessage.innerHTML = `🎨 <strong>Sua arte está sendo criada!</strong><br><span style="font-size: 18px; font-weight: 400; margin-top: 10px; display: block;">Vá para a tela externa buscar sua obra de arte personalizada</span>${promptDisplay}`;
 		
 		// Add to content div
 		contentDiv.appendChild(collectionMessage);
@@ -595,6 +597,13 @@ export function addSessionResetButton() {
 			resetButton.disabled = false;
 			resetButton.textContent = 'RESET SESSION';
 			resetButton.style.opacity = '1';
+			
+			// Clear any existing session timeout messages immediately
+			const timeoutMessage = document.getElementById('session-timeout-message');
+			if (timeoutMessage) {
+				timeoutMessage.remove();
+				console.log('🗑️ Session timeout message cleared by reset button');
+			}
 			
 			// The session polling in script.js will detect the new session and reset WebRTC
 			
