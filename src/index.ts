@@ -266,7 +266,16 @@ const azureImageEdit = async (c: Context) => {
 						captured_at: new Date().toISOString(),
 						size_bytes: uint8Array.length,
 						is_valid_png: isValidPNG,
-						is_valid_jpeg: isValidJPEG
+						is_valid_jpeg: isValidJPEG,
+						// Add regeneration metadata
+						prompt: prompt,
+						size: size,
+						model: 'gpt-image-1',
+						api_endpoint: 'azure_image_edit',
+						base_prompt_instructions: BASE_PROMPT_INSTRUCTIONS,
+						full_prompt: prompt + BASE_PROMPT_INSTRUCTIONS,
+						event: 'ArtRio 2025',
+						location: 'Marina da Glória'
 					};
 					debugUploadFormData.append('metadata', JSON.stringify(debugMetadata));
 					
@@ -408,11 +417,11 @@ const azureImageEdit = async (c: Context) => {
 					body: uploadFormData
 				});
 				
-				const uploadResponseText = await uploadResponse.text();
 				console.log('Cloudflare Images response status:', uploadResponse.status);
-				console.log('Cloudflare Images response:', uploadResponseText);
 				
 				if (!uploadResponse.ok) {
+					const uploadResponseText = await uploadResponse.text();
+					console.log('Cloudflare Images response:', uploadResponseText);
 					console.error('Cloudflare Images upload failed - falling back to base64');
 					// Fallback to base64 data URL
 					const imageDataUrl = `data:image/png;base64,${base64Data}`;
@@ -420,6 +429,7 @@ const azureImageEdit = async (c: Context) => {
 				}
 				
 				const uploadResult: any = await uploadResponse.json();
+				console.log('Cloudflare Images response:', uploadResult);
 				console.log('Image uploaded successfully to Cloudflare Images:', imageId);
 				console.log('Upload result:', uploadResult);
 				

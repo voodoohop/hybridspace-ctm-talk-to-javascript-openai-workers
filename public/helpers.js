@@ -74,25 +74,9 @@ function printImageDirect(imageUrl) {
 export function addImageToPage(url, prompt = '') {
 	console.log('🖼️ addImageToPage called with URL:', url);
 	
-	// Auto-print if it's a shareable URL (not base64) and in kiosk mode
-	if (url && !url.startsWith('data:')) {
-		// Check if we're in kiosk mode by looking for kiosk-specific indicators
-		const isKioskMode = window.navigator.userAgent.includes('Chrome') && 
-						   (window.outerHeight === window.screen.height || 
-							document.fullscreenElement !== null);
-		
-		console.log('🖨️ Kiosk mode check - isKioskMode:', isKioskMode, 'userAgent:', window.navigator.userAgent);
-		
-		if (isKioskMode) {
-			console.log('🖨️ Kiosk mode detected - auto-printing image:', url);
-			// Small delay to ensure image is fully loaded
-			setTimeout(() => printImageDirect(url), 1500);
-		} else {
-			console.log('🖨️ Not in kiosk mode - skipping auto-print');
-		}
-	} else {
-		console.log('🖨️ Skipping auto-print - URL is base64 or empty:', url?.substring(0, 50));
-	}
+	// Auto-print functionality disabled
+	// Note: printImageDirect() function is still available for manual use if needed
+	console.log('🖨️ Auto-print disabled - image generated:', url?.substring(0, 50));
 	
 	// Log that image was generated but not displayed on main screen
 	console.log('✅ Image generated successfully:', url);
@@ -203,7 +187,7 @@ export function setupLogoAnimation(audioStream) {
 	heart.innerHTML = '♥';
 	heart.style.position = 'absolute';
 	heart.style.color = '#FF4444';
-	heart.style.fontSize = '66px';
+	heart.style.fontSize = '50px';
 	heart.style.fontWeight = 'bold';
 	heart.style.left = '28%';
 	heart.style.top = '28%';
@@ -287,14 +271,8 @@ export async function generateImage({ prompt: userPrompt, width = 1024, height =
 			photoBlob = await capturePhotoFromVideo(videoElement);
 			console.log('📸 Photo capture result:', !!photoBlob, photoBlob ? `${photoBlob.size} bytes` : 'null');
 			
-			// Stop all camera tracks (video element is already hidden)
-			console.log('🛑 Stopping camera tracks...');
-			cameraStream.getTracks().forEach(track => {
-				track.stop();
-				console.log('🛑 Camera track stopped:', track.kind);
-			});
-			
-			console.log('✅ Camera stopped after photo capture (video element already hidden)');
+			// Keep camera running for potential future captures
+			console.log('📹 Camera remains active for future use');
 		} else {
 			console.log('⚠️ No camera available - will use fallback image generation');
 		}

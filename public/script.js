@@ -10,6 +10,9 @@ let currentSessionId = null;
 let sessionPollingInterval = null;
 let isInitialLoad = true;
 
+// Image generation counter for current session
+let sessionImageCount = 0;
+
 // WebRTC state
 let peerConnection = null;
 let dataChannel = null;
@@ -116,13 +119,21 @@ document.addEventListener('DOMContentLoaded', () => {
 			return { success: true, html: document.documentElement.outerHTML };
 		},
 		generateImage: async (params) => {
-			return await generateImage(params, videoElement, cameraStream);
+			const result = await generateImage(params, videoElement, cameraStream);
+			// Increment and log session image counter
+			sessionImageCount++;
+			console.log(`📊 Session Image Count: ${sessionImageCount}`);
+			return result;
 		}
 	};
 
 	// WebRTC reset function
 	async function resetWebRTCConnection() {
 		console.log('🔄 Resetting WebRTC connection for new session');
+		
+		// Reset image counter for new session
+		sessionImageCount = 0;
+		console.log('📊 Session Image Count reset to 0 for new session');
 		
 		// Close existing connection if it exists
 		if (peerConnection) {
@@ -139,11 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			audioStream.getTracks().forEach(track => track.stop());
 		}
 		
-		// Stop existing camera stream
-		if (cameraStream) {
-			cameraStream.getTracks().forEach(track => track.stop());
-			console.log('🎥 Camera stream stopped for reset');
-		}
+		// Keep camera stream active for next session
+		// (Camera doesn't need to be reset between conversations)
 		
 		// Remove existing video element
 		if (videoElement) {
