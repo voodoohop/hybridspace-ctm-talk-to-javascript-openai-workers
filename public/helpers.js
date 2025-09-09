@@ -232,11 +232,39 @@ export function setupLogoAnimation(audioStream) {
 }
 
 
+// Session image counter - shared across all calls
+let sessionImageCount = 0;
+
+// Reset counter function - called from script.js when session resets
+export function resetSessionImageCount() {
+	sessionImageCount = 0;
+	console.log('📊 Session Image Count reset to 0 for new session');
+}
+
+// Get current session image count - used by script.js to check before function calls
+export function getSessionImageCount() {
+	return sessionImageCount;
+}
+
 // Generate image function
 export async function generateImage({ prompt: userPrompt, width = 1024, height = 1024 }, videoElement, cameraStream) {
 	console.log('🎬 generateImage() called with params:', { prompt: userPrompt.substring(0, 50) + '...', width, height });
 	console.log('📷 Video element available:', !!videoElement);
 	console.log('📹 Camera stream available:', !!cameraStream);
+	
+	// Check if we've already generated an image this session
+	if (sessionImageCount >= 1) {
+		console.log('🚫 Image generation blocked - already generated 1 image this session');
+		return { 
+			success: false, 
+			error: 'Only one image allowed per session',
+			imageCount: sessionImageCount 
+		};
+	}
+	
+	// Increment and log session image counter
+	sessionImageCount++;
+	console.log(`📊 Session Image Count: ${sessionImageCount}`);
 	
 	// End the current session immediately when image generation starts
 	console.log('🏁 Ending current session - calling /api/end-session');
@@ -494,11 +522,12 @@ export function addTestButton() {
 				console.log('🎯 Starting test image generation with prompt:', testPrompt);
 				console.log('📷 Camera available:', !!window.videoElement, !!window.cameraStream);
 				
-				const result = await window.fns.generateImage({
+				// Call generateImage directly - counter logic is now inside the function
+				const result = await generateImage({
 					prompt: testPrompt,
 					width: 1024,
 					height: 1024
-				});
+				}, window.videoElement, window.cameraStream);
 				
 				console.log('✅ Test generation completed successfully:', result);
 			} else {

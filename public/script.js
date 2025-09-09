@@ -1,5 +1,5 @@
 // Import helper functions
-import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton, addSessionResetButton, addDebugNavButtons } from './helpers.js';
+import { addImageToPage, capturePhotoFromVideo, initializeCamera, setupLogoAnimation, generateImage, closeConnection, showCollectionMessage, addTestButton, addSessionResetButton, addDebugNavButtons, resetSessionImageCount, getSessionImageCount } from './helpers.js';
 
 // Global camera state - accessible to test functions
 let cameraStream = null;
@@ -10,8 +10,7 @@ let currentSessionId = null;
 let sessionPollingInterval = null;
 let isInitialLoad = true;
 
-// Image generation counter for current session
-let sessionImageCount = 0;
+// Image generation counter moved to helpers.js
 
 // WebRTC state
 let peerConnection = null;
@@ -119,11 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			return { success: true, html: document.documentElement.outerHTML };
 		},
 		generateImage: async (params) => {
-			const result = await generateImage(params, videoElement, cameraStream);
-			// Increment and log session image counter
-			sessionImageCount++;
-			console.log(`📊 Session Image Count: ${sessionImageCount}`);
-			return result;
+			// Call helpers.js directly - counter logic is now inside generateImage()
+			return await generateImage(params, videoElement, cameraStream);
 		}
 	};
 
@@ -132,8 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		console.log('🔄 Resetting WebRTC connection for new session');
 		
 		// Reset image counter for new session
-		sessionImageCount = 0;
-		console.log('📊 Session Image Count reset to 0 for new session');
+		resetSessionImageCount();
 		
 		// Close existing connection if it exists
 		if (peerConnection) {
@@ -314,6 +309,26 @@ document.addEventListener('DOMContentLoaded', () => {
 						parameters: JSON.parse(msg.arguments)
 					};
 					console.log('Calling local function', call.name, 'with', call.parameters);
+					
+					// Block generateImage calls if we've already generated one this session
+					if (call.name === 'generateImage' && getSessionImageCount() >= 1) {
+						console.log('🚫 Function call blocked - already generated 1 image this session');
+						const event = {
+							type: 'conversation.item.create',
+							item: {
+								type: 'function_call_output',
+								call_id: msg.call_id,
+								output: JSON.stringify({ 
+									success: false, 
+									error: 'Only one image allowed per session',
+									imageCount: getSessionImageCount()
+								})
+							}
+						};
+						dataChannel.send(JSON.stringify(event));
+						return;
+					}
+					
 					const fn = fns[call.name];
 					if (fn) {
 						try {
