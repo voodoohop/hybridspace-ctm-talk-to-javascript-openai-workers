@@ -231,78 +231,56 @@ const azureImageEdit = async (c: Context) => {
 			size: size
 		});
 		
-		// Save uploaded image temporarily for debugging
+		// Save uploaded image temporarily for debugging (simplified to avoid FormData overhead)
+		console.log('💾 Debug upload check - imageFile exists:', !!imageFile);
 		if (imageFile) {
+			console.log('💾 Starting simplified debug upload process...');
 			try {
-				console.log('💾 Attempting to save uploaded image for debugging...');
-				const arrayBuffer = await imageFile.arrayBuffer();
-				const uint8Array = new Uint8Array(arrayBuffer);
-				console.log('💾 Image converted to array buffer, size:', uint8Array.length, 'bytes');
-				console.log('💾 First 20 bytes:', Array.from(uint8Array.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+				const debugImageId = `debug-captured-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				console.log('💾 Uploading captured image for debugging with ID:', debugImageId);
+				console.log('💾 Original file size:', imageFile.size, 'bytes');
+				console.log('💾 File type:', imageFile.type);
 				
-				// Check if it's a valid image format
-				const pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-				const jpegSignature = [0xFF, 0xD8, 0xFF];
-				const isValidPNG = pngSignature.every((byte, index) => uint8Array[index] === byte);
-				const isValidJPEG = jpegSignature.every((byte, index) => uint8Array[index] === byte);
-				console.log('💾 Is valid PNG:', isValidPNG);
-				console.log('💾 Is valid JPEG:', isValidJPEG);
-				console.log('💾 File type from header:', imageFile.type);
-				console.log('💾 File name from header:', imageFile.name);
+				// Create minimal FormData with just file and ID
+				const debugUploadFormData = new FormData();
+				debugUploadFormData.append('file', imageFile, `${debugImageId}.jpg`);
+				debugUploadFormData.append('id', debugImageId);
 				
-				// Upload captured image to Cloudflare Images for manual inspection
-				try {
-					const debugImageId = `debug-captured-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-					console.log('💾 Uploading captured image for debugging with ID:', debugImageId);
-					
-					const debugUploadFormData = new FormData();
-					debugUploadFormData.append('file', new Blob([uint8Array], { type: imageFile.type || 'image/jpeg' }), `${debugImageId}.jpg`);
-					debugUploadFormData.append('id', debugImageId);
-					
-					const debugMetadata = {
-						type: 'debug_captured_image',
-						original_filename: imageFile.name,
-						original_type: imageFile.type,
-						captured_at: new Date().toISOString(),
-						size_bytes: uint8Array.length,
-						is_valid_png: isValidPNG,
-						is_valid_jpeg: isValidJPEG,
-						// Add regeneration metadata
-						prompt: prompt,
-						size: size,
-						model: 'gpt-image-1',
-						api_endpoint: 'azure_image_edit',
-						base_prompt_instructions: BASE_PROMPT_INSTRUCTIONS,
-						full_prompt: prompt + BASE_PROMPT_INSTRUCTIONS,
-						event: 'ArtRio 2025',
-						location: 'Marina da Glória'
-					};
-					debugUploadFormData.append('metadata', JSON.stringify(debugMetadata));
-					
-					const debugUploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
-					const debugUploadResponse = await fetch(debugUploadUrl, {
-						method: 'POST',
-						headers: {
-							'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
-						},
-						body: debugUploadFormData
-					});
-					
-					if (debugUploadResponse.ok) {
-						const debugUploadResult: any = await debugUploadResponse.json();
-						const debugImageUrl = debugUploadResult.result.variants[0];
-						console.log('💾 ✅ Captured image uploaded for debugging:', debugImageUrl);
-						console.log('💾 Debug image ID:', debugImageId);
-					} else {
-						const debugError = await debugUploadResponse.text();
-						console.log('💾 ❌ Failed to upload debug image:', debugUploadResponse.status, debugError);
-					}
-				} catch (debugUploadError) {
-					console.error('💾 Error uploading debug image:', debugUploadError);
+				// Use same metadata structure as production image upload
+				const debugMetadata = {
+					prompt: prompt,
+					generated_at: new Date().toISOString(),
+					event: 'ArtRio 2025',
+					location: 'Marina da Glória',
+					model: 'gpt-image-1',
+					size: size,
+					type: 'debug_captured_image',
+					original_size: imageFile.size,
+					original_filename: imageFile.name,
+					original_type: imageFile.type
+				};
+				debugUploadFormData.append('metadata', JSON.stringify(debugMetadata));
+				
+				const debugUploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
+				const debugUploadResponse = await fetch(debugUploadUrl, {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+					},
+					body: debugUploadFormData
+				});
+				
+				if (debugUploadResponse.ok) {
+					const debugUploadResult: any = await debugUploadResponse.json();
+					const debugImageUrl = debugUploadResult.result.variants[0];
+					console.log('💾 ✅ Captured image uploaded for debugging:', debugImageUrl);
+					console.log('💾 Debug image ID:', debugImageId);
+				} else {
+					const debugError = await debugUploadResponse.text();
+					console.log('💾 ❌ Failed to upload debug image:', debugUploadResponse.status, debugError);
 				}
-				
-			} catch (debugError) {
-				console.error('💾 Error analyzing uploaded image:', debugError);
+			} catch (debugUploadError) {
+				console.error('💾 Error uploading debug image:', debugUploadError);
 			}
 		}
 
