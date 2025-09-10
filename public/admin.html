@@ -58,15 +58,6 @@
             min-width: 200px;
         }
 
-        .session-status {
-            font-size: 14px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-
-        .status-idle { color: #FFD400; }
-        .status-active { color: #00FF88; }
-        .status-completed { color: #FF6B6B; }
 
         .start-session-btn {
             background: linear-gradient(135deg, #FFD400, #FFA500);
@@ -283,7 +274,6 @@
 
     <div class="controls">
         <div class="session-control">
-            <div class="session-status" id="session-status">Status: Carregando...</div>
             <button class="start-session-btn" id="start-session-btn" onclick="startNewSession()">
                 Iniciar Nova Sessão
             </button>
@@ -310,48 +300,15 @@
     </div>
 
     <script>
-        let sessionPollingInterval;
         let imagesPollingInterval;
 
         // Initialize admin interface
         document.addEventListener('DOMContentLoaded', () => {
-            updateSessionStatus();
             loadImages();
             
-            // Start polling with slower intervals
-            sessionPollingInterval = setInterval(updateSessionStatus, 7000);
+            // Start polling for images only
             imagesPollingInterval = setInterval(loadImages, 10000);
         });
-
-        // Session management
-        async function updateSessionStatus() {
-            try {
-                const response = await fetch('/api/session-state');
-                if (!response.ok) throw new Error('Failed to fetch session state');
-                
-                const sessionState = await response.json();
-                const statusElement = document.getElementById('session-status');
-                
-                // Update status display only
-                statusElement.className = `session-status status-${sessionState.status}`;
-                
-                switch (sessionState.status) {
-                    case 'idle':
-                        statusElement.textContent = 'Status: Aguardando';
-                        break;
-                    case 'active':
-                        statusElement.textContent = 'Status: Sessão Ativa';
-                        break;
-                    case 'completed':
-                        statusElement.textContent = 'Status: Obra Sendo Gerada';
-                        break;
-                }
-                
-            } catch (error) {
-                console.error('Error updating session status:', error);
-                document.getElementById('session-status').textContent = 'Status: Erro';
-            }
-        }
 
         async function startNewSession() {
             try {
@@ -371,9 +328,8 @@
                 const result = await response.json();
                 console.log('Session started:', result);
                 
-                // Reset button text and update status
+                // Reset button text
                 button.textContent = originalText;
-                updateSessionStatus();
                 
             } catch (error) {
                 console.error('Error starting session:', error);
