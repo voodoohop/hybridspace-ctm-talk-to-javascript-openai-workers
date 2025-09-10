@@ -93,6 +93,28 @@
             transform: none;
         }
 
+        .experience-btn {
+            background: linear-gradient(135deg, #00B4D8, #0077B6);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-left: 15px;
+        }
+
+        .experience-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 180, 216, 0.4);
+        }
+
         .images-section {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -145,7 +167,7 @@
             flex-wrap: wrap;
         }
 
-        .print-btn, .qr-btn, .delete-btn {
+        .print-btn, .qr-btn, .regenerate-btn, .delete-btn {
             padding: 8px 16px;
             border: none;
             border-radius: 6px;
@@ -171,6 +193,20 @@
 
         .qr-btn:hover {
             background: #FFB400;
+        }
+
+        .regenerate-btn {
+            background: #00B4D8;
+            color: white;
+        }
+
+        .regenerate-btn:hover {
+            background: #0096C7;
+        }
+
+        .regenerate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .delete-btn {
@@ -251,6 +287,9 @@
             <button class="start-session-btn" id="start-session-btn" onclick="startNewSession()">
                 Iniciar Nova Sessão
             </button>
+            <a href="/" target="_blank" class="experience-btn">
+                Experiência
+            </a>
         </div>
     </div>
 
@@ -395,6 +434,9 @@
                         <button class="qr-btn" onclick="showQRCode('${image.url}')">
                             📱 QR Code
                         </button>
+                        <button class="regenerate-btn" onclick="regenerateImage('${image.id}')">
+                            🔄 Regenerar
+                        </button>
                         <button class="delete-btn" onclick="deleteImage('${image.id}', '${image.url}')">
                             🗑️ Deletar
                         </button>
@@ -490,6 +532,54 @@
                 
                 deleteBtn.disabled = false;
                 deleteBtn.textContent = originalText;
+            }
+        }
+
+        // Regenerate image functionality
+        async function regenerateImage(imageId) {
+            if (!confirm('Regenerar esta imagem com os mesmos parâmetros? Isso criará uma nova versão.')) {
+                return;
+            }
+            
+            const regenerateBtn = event.target;
+            const originalText = regenerateBtn.textContent;
+            
+            try {
+                regenerateBtn.disabled = true;
+                regenerateBtn.textContent = '⏳ Regenerando...';
+                
+                const response = await fetch(`/api/regenerate/${imageId}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Failed to regenerate: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Image regenerated:', result);
+                
+                // Show success feedback
+                regenerateBtn.textContent = '✅ Regenerado!';
+                regenerateBtn.style.background = '#00FF88';
+                regenerateBtn.style.color = '#000';
+                
+                // Reload images immediately to show new regenerated image
+                setTimeout(() => {
+                    loadImages();
+                    regenerateBtn.disabled = false;
+                    regenerateBtn.textContent = originalText;
+                    regenerateBtn.style.background = '#00B4D8';
+                    regenerateBtn.style.color = 'white';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error regenerating image:', error);
+                alert(`Erro ao regenerar imagem: ${error.message}`);
+                
+                regenerateBtn.disabled = false;
+                regenerateBtn.textContent = originalText;
             }
         }
 

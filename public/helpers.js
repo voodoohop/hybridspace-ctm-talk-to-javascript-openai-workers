@@ -661,7 +661,6 @@ export function addDebugNavButtons() {
 	buttonContainer.style.zIndex = '9998';
 
 	const buttons = [
-		{ text: 'GALLERY', url: '/gallery.html', color: '#00B4D8' },
 		{ text: 'ADMIN', url: '/admin.html', color: '#FFD400' },
 		{ text: 'CAROUSEL', url: '/carousel.html', color: '#00FF88' }
 	];

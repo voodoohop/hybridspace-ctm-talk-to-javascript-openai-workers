@@ -24,7 +24,7 @@ Based on the conversation transcript, we need to transform the current single-sc
 - **Status**: ✅ Fully implemented and functional
 
 ### Multi-Screen Architecture (PARTIALLY COMPLETE)
-- **Gallery interface**: `/gallery.html` with image management and QR codes
+- **Admin interface**: `/admin.html` with image management, printing, and QR codes
 - **Carousel display**: `/carousel.html?latest=true` for external screens
 - **Auto-print functionality**: Kiosk mode integration for automatic printing
 - **Status**: ✅ Core functionality complete, needs refinement
@@ -39,7 +39,7 @@ Based on the conversation transcript, we need to transform the current single-sc
 
 ### Existing Components
 - **Main Experience** (`/index.html`) - Voice conversation with camera view, art generation, QR codes
-- **Gallery** (`/gallery.html`) - Admin interface with all images and management controls
+- **Admin Interface** (`/admin.html`) - Image management, printing, QR codes, and session controls
 - **Carousel** (`/carousel.html`) - Simple slideshow of generated images
 - **Backend** (`/src/index.ts`) - Cloudflare Workers with Azure GPT Image 1 API integration
 
@@ -232,7 +232,6 @@ User discusses innovation → AI references PRIO's pioneering spirit
 / (or /booth)     - Main conversation experience
 /admin            - Print management interface  
 /carousel         - Public display screen
-/gallery          - Existing gallery (keep for backup)
 ```
 
 #### 4.2 Session Management

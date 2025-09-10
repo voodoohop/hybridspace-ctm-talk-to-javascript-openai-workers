@@ -64,10 +64,15 @@
         let currentIndex = 0;
         let autoplayInterval = null;
         let lastImageId = null;
+        let currentMode = 'carousel'; // 'latest' or 'carousel'
         
         // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const showLatestOnly = urlParams.get('latest') === 'true';
+        const hybridMode = urlParams.get('latest_hybrid') === 'true';
+        
+        // 1.5 minutes in milliseconds
+        const LATEST_TIMEOUT_MS = 90000;
 
         async function loadImages() {
             try {
@@ -85,6 +90,33 @@
                         if (latestImage.id !== lastImageId) {
                             lastImageId = latestImage.id;
                             displayLatestImage(latestImage);
+                        }
+                    } else if (hybridMode) {
+                        // Hybrid mode: latest if fresh, carousel if old
+                        const latestImage = allImages[0];
+                        const imageAge = Date.now() - new Date(latestImage.uploaded).getTime();
+                        const shouldShowLatest = imageAge < LATEST_TIMEOUT_MS;
+                        
+                        if (shouldShowLatest && currentMode !== 'latest') {
+                            // Switch to latest mode
+                            currentMode = 'latest';
+                            stopAutoplay();
+                            lastImageId = latestImage.id;
+                            displayLatestImage(latestImage);
+                            console.log(`Hybrid mode: Showing latest image (${Math.round(imageAge/1000)}s old)`);
+                        } else if (!shouldShowLatest && currentMode !== 'carousel') {
+                            // Switch to carousel mode
+                            currentMode = 'carousel';
+                            shuffleArray(allImages);
+                            currentIndex = 0;
+                            displayCurrentImage();
+                            startAutoplay();
+                            console.log(`Hybrid mode: Switching to carousel (image ${Math.round(imageAge/1000)}s old)`);
+                        } else if (shouldShowLatest && latestImage.id !== lastImageId) {
+                            // Update latest image if there's a new one
+                            lastImageId = latestImage.id;
+                            displayLatestImage(latestImage);
+                            console.log(`Hybrid mode: Updated to new latest image`);
                         }
                     } else {
                         // Original carousel behavior
@@ -152,14 +184,38 @@
             autoplayInterval = setInterval(nextImage, 15000); // Switch every 15 seconds
         }
 
+        function stopAutoplay() {
+            if (autoplayInterval) {
+                clearInterval(autoplayInterval);
+                autoplayInterval = null;
+            }
+        }
+
         // Load images on page load
         window.addEventListener('load', loadImages);
 
-        // Reload images - more frequently for latest-only mode
-        const pollInterval = showLatestOnly ? 5000 : 30000; // 5 seconds for latest, 30 seconds for carousel
+        // Reload images - adjust polling based on mode
+        let pollInterval;
+        if (showLatestOnly) {
+            pollInterval = 5000; // 5 seconds for latest-only mode
+        } else if (hybridMode) {
+            pollInterval = 10000; // 10 seconds for hybrid mode (needs frequent checks)
+        } else {
+            pollInterval = 30000; // 30 seconds for carousel mode
+        }
+        
         setInterval(loadImages, pollInterval);
         
-        console.log(`Carousel mode: ${showLatestOnly ? 'Latest only' : 'Full carousel'}, polling every ${pollInterval/1000}s`);
+        let modeDescription;
+        if (showLatestOnly) {
+            modeDescription = 'Latest only';
+        } else if (hybridMode) {
+            modeDescription = 'Hybrid (latest → carousel after 90s)';
+        } else {
+            modeDescription = 'Full carousel';
+        }
+        
+        console.log(`Carousel mode: ${modeDescription}, polling every ${pollInterval/1000}s`);
     </script>
 </body>
 </html>

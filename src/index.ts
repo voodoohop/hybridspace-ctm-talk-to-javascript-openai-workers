@@ -146,7 +146,7 @@ const makeAzureApiCallWithSafetyFallback = async (azureFormData: FormData, azure
 		console.log('❌ First attempt failed - retrying with safe fallback prompt for any error type');
 		
 		// Create safe fallback prompt for any error
-		const safeFallbackPrompt = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Sugarloaf Mountain. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood." + BASE_PROMPT_INSTRUCTIONS;
+		const safeFallbackPrompt = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Guanabara Bay with the Museum of Tomorrow (Museu do Amanhã) in the background. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood." + BASE_PROMPT_INSTRUCTIONS;
 		
 		// Create new FormData with safe prompt
 		const safeFormData = new FormData();
@@ -231,56 +231,35 @@ const azureImageEdit = async (c: Context) => {
 			size: size
 		});
 		
-		// Save uploaded image temporarily for debugging (simplified to avoid FormData overhead)
-		console.log('💾 Debug upload check - imageFile exists:', !!imageFile);
+		// Upload captured image first to get reference for regeneration
+		let debugImageId = null;
 		if (imageFile) {
-			console.log('💾 Starting simplified debug upload process...');
 			try {
-				const debugImageId = `debug-captured-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-				console.log('💾 Uploading captured image for debugging with ID:', debugImageId);
-				console.log('💾 Original file size:', imageFile.size, 'bytes');
-				console.log('💾 File type:', imageFile.type);
+				debugImageId = `debug-captured-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				console.log('💾 Uploading captured image with ID:', debugImageId);
 				
-				// Create minimal FormData with just file and ID
 				const debugUploadFormData = new FormData();
 				debugUploadFormData.append('file', imageFile, `${debugImageId}.jpg`);
 				debugUploadFormData.append('id', debugImageId);
 				
-				// Use same metadata structure as production image upload
-				const debugMetadata = {
-					prompt: prompt,
-					generated_at: new Date().toISOString(),
-					event: 'ArtRio 2025',
-					location: 'Marina da Glória',
-					model: 'gpt-image-1',
-					size: size,
-					type: 'debug_captured_image',
-					original_size: imageFile.size,
-					original_filename: imageFile.name,
-					original_type: imageFile.type
-				};
-				debugUploadFormData.append('metadata', JSON.stringify(debugMetadata));
+				const debugUploadResponse = await fetch(
+					`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`,
+					{
+						method: 'POST',
+						headers: { 'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}` },
+						body: debugUploadFormData
+					}
+				);
 				
-				const debugUploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
-				const debugUploadResponse = await fetch(debugUploadUrl, {
-					method: 'POST',
-					headers: {
-						'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
-					},
-					body: debugUploadFormData
-				});
-				
-				if (debugUploadResponse.ok) {
-					const debugUploadResult: any = await debugUploadResponse.json();
-					const debugImageUrl = debugUploadResult.result.variants[0];
-					console.log('💾 ✅ Captured image uploaded for debugging:', debugImageUrl);
-					console.log('💾 Debug image ID:', debugImageId);
+				if (!debugUploadResponse.ok) {
+					console.log('💾 ❌ Failed to upload captured image');
+					debugImageId = null;
 				} else {
-					const debugError = await debugUploadResponse.text();
-					console.log('💾 ❌ Failed to upload debug image:', debugUploadResponse.status, debugError);
+					console.log('💾 ✅ Captured image uploaded:', debugImageId);
 				}
-			} catch (debugUploadError) {
-				console.error('💾 Error uploading debug image:', debugUploadError);
+			} catch (error) {
+				console.error('💾 Error uploading captured image:', error);
+				debugImageId = null;
 			}
 		}
 
@@ -370,15 +349,10 @@ const azureImageEdit = async (c: Context) => {
 				uploadFormData.append('file', new Blob([bytes], { type: 'image/png' }), `${imageId}.png`);
 				uploadFormData.append('id', imageId);
 				
-				// Add metadata including the prompt and generation details
+				// Store only what's needed for regeneration
 				const metadata = {
 					prompt: prompt,
-					generated_at: new Date().toISOString(),
-					event: 'ArtRio 2025',
-					location: 'Marina da Glória',
-					model: 'gpt-image-1',
-					size: size,
-					type: 'personalized_artwork'
+					input_image_id: debugImageId
 				};
 				uploadFormData.append('metadata', JSON.stringify(metadata));
 				
@@ -492,7 +466,7 @@ app.get('/image/:id/metadata', async (c) => {
 	}
 });
 
-// Gallery API endpoint - list all images
+// Gallery API endpoint - list all images (used by admin interface)
 app.get('/api/gallery', async (c) => {
 	try {
 		// Fetch images from Cloudflare Images API
@@ -563,6 +537,158 @@ app.delete('/api/delete-image/:id', async (c) => {
 	} catch (error) {
 		console.error('Error deleting image:', error);
 		return c.json({ error: 'Failed to delete image' }, 500);
+	}
+});
+
+// Regenerate image endpoint
+app.post('/api/regenerate/:id', async (c) => {
+	try {
+		const imageId = c.req.param('id');
+		console.log('🔄 Regenerating image with ID:', imageId);
+		
+		// Fetch original image metadata
+		const metadataResponse = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1/${imageId}`,
+			{
+				headers: {
+					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+				},
+			}
+		);
+		
+		if (!metadataResponse.ok) {
+			console.error('Failed to fetch image metadata:', metadataResponse.status);
+			return c.json({ error: 'Original image not found' }, 404);
+		}
+		
+		const metadataResult: any = await metadataResponse.json();
+		const originalMetadata = metadataResult.result.meta || {};
+		
+		console.log('📋 Original metadata:', originalMetadata);
+		
+		// Extract original parameters
+		const originalPrompt = originalMetadata.prompt;
+		const originalSize = originalMetadata.size || '1024x1536';
+		
+		if (!originalPrompt) {
+			return c.json({ error: 'Original prompt not found in metadata' }, 400);
+		}
+		
+		// Get original image for reference (same as original generation)
+		const originalImageUrl = `https://imagedelivery.net/w4vz7D3Y5kElKOG8VzkQ5A/${imageId}/public`;
+		const originalImageResponse = await fetch(originalImageUrl);
+		
+		if (!originalImageResponse.ok) {
+			return c.json({ error: 'Failed to fetch original image' }, 400);
+		}
+		
+		const originalImageBlob = await originalImageResponse.blob();
+		
+		// Create form data for regeneration (reuse existing Azure logic)
+		const azureFormData = new FormData();
+		azureFormData.append('image[]', originalImageBlob, 'original.png');
+		
+		// Add reference image for style guidance (same as original)
+		try {
+			const referenceImageUrl = 'https://prio-conception.thomash-efd.workers.dev/prioreference.jpeg';
+			const referenceResponse = await fetch(referenceImageUrl);
+			if (referenceResponse.ok) {
+				const referenceBlob = await referenceResponse.blob();
+				azureFormData.append('image[]', referenceBlob, 'prioreference.jpeg');
+				console.log('✅ Reference image added for regeneration');
+			}
+		} catch (error) {
+			console.warn('⚠️ Error loading reference image for regeneration:', error);
+		}
+		
+		azureFormData.append('prompt', originalPrompt + BASE_PROMPT_INSTRUCTIONS);
+		azureFormData.append('model', 'gpt-image-1');
+		azureFormData.append('size', originalSize);
+		azureFormData.append('quality', 'high');
+		azureFormData.append('n', '1');
+		
+		const azureApiUrl = `https://gptimagemain1-resource.cognitiveservices.azure.com/openai/deployments/gpt-image-1/images/edits?api-version=2025-04-01-preview`;
+		
+		// Make Azure API call with safety fallback (reuse existing function)
+		let result: any;
+		try {
+			result = await makeAzureApiCallWithSafetyFallback(azureFormData, azureApiUrl, c.env.AZURE_OPENAI_API_KEY);
+		} catch (error: any) {
+			const errorData = JSON.parse(error.message);
+			return c.json({
+				error: 'Failed to regenerate image with Azure OpenAI',
+				details: errorData
+			}, 500);
+		}
+		
+		// Upload regenerated image to Cloudflare Images
+		if (result.data && result.data[0] && result.data[0].b64_json) {
+			try {
+				// Generate new unique image ID
+				const newImageId = `prio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+				console.log('🆕 New regenerated image ID:', newImageId);
+				
+				// Convert base64 to blob for upload
+				const base64Data = result.data[0].b64_json;
+				const binaryString = atob(base64Data);
+				const bytes = new Uint8Array(binaryString.length);
+				for (let i = 0; i < binaryString.length; i++) {
+					bytes[i] = binaryString.charCodeAt(i);
+				}
+				
+				// Upload to Cloudflare Images with metadata
+				const uploadFormData = new FormData();
+				uploadFormData.append('file', new Blob([bytes], { type: 'image/png' }), `${newImageId}.png`);
+				uploadFormData.append('id', newImageId);
+				
+				// Store only what's needed for regeneration
+				const metadata = {
+					prompt: originalPrompt,
+					input_image_id: originalMetadata.input_image_id
+				};
+				uploadFormData.append('metadata', JSON.stringify(metadata));
+				
+				const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`;
+				const uploadResponse = await fetch(uploadUrl, {
+					method: 'POST',
+					headers: {
+						'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
+					},
+					body: uploadFormData
+				});
+				
+				if (!uploadResponse.ok) {
+					const uploadResponseText = await uploadResponse.text();
+					console.error('Cloudflare Images upload failed for regeneration:', uploadResponseText);
+					return c.json({ error: 'Failed to upload regenerated image' }, 500);
+				}
+				
+				const uploadResult: any = await uploadResponse.json();
+				const shareableUrl = uploadResult.result.variants[0];
+				
+				console.log('✅ Image regenerated successfully:', newImageId);
+				return c.json({ 
+					success: true, 
+					output: shareableUrl,
+					newImageId: newImageId,
+					originalImageId: imageId
+				});
+				
+			} catch (uploadError) {
+				console.error('Error uploading regenerated image:', uploadError);
+				return c.json({ error: 'Failed to upload regenerated image' }, 500);
+			}
+		} else {
+			console.error('No image data in regeneration response:', JSON.stringify(result, null, 2));
+			return c.json({ error: 'No image data received from Azure OpenAI' }, 500);
+		}
+		
+	} catch (error: any) {
+		console.error('💥 Error in image regeneration:', error);
+		return c.json({
+			error: 'Unexpected error during regeneration',
+			details: error.message
+		}, 500);
 	}
 });
 
