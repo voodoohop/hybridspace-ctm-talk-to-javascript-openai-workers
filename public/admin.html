@@ -331,26 +331,19 @@
                 
                 const sessionState = await response.json();
                 const statusElement = document.getElementById('session-status');
-                const startButton = document.getElementById('start-session-btn');
                 
-                // Update status display
+                // Update status display only
                 statusElement.className = `session-status status-${sessionState.status}`;
                 
                 switch (sessionState.status) {
                     case 'idle':
                         statusElement.textContent = 'Status: Aguardando';
-                        startButton.disabled = false;
-                        startButton.textContent = 'Iniciar Nova Sessão';
                         break;
                     case 'active':
                         statusElement.textContent = 'Status: Sessão Ativa';
-                        startButton.disabled = true;
-                        startButton.textContent = 'Sessão em Andamento';
                         break;
                     case 'completed':
                         statusElement.textContent = 'Status: Obra Sendo Gerada';
-                        startButton.disabled = false;
-                        startButton.textContent = 'Iniciar Nova Sessão';
                         break;
                 }
                 
@@ -363,7 +356,7 @@
         async function startNewSession() {
             try {
                 const button = document.getElementById('start-session-btn');
-                button.disabled = true;
+                const originalText = button.textContent;
                 button.textContent = 'Iniciando...';
                 
                 const response = await fetch('/api/start-session', {
@@ -378,13 +371,17 @@
                 const result = await response.json();
                 console.log('Session started:', result);
                 
-                // Update status immediately
+                // Reset button text and update status
+                button.textContent = originalText;
                 updateSessionStatus();
                 
             } catch (error) {
                 console.error('Error starting session:', error);
                 alert('Erro ao iniciar sessão. Tente novamente.');
-                updateSessionStatus();
+                
+                // Reset button text
+                const button = document.getElementById('start-session-btn');
+                button.textContent = 'Iniciar Nova Sessão';
             }
         }
 
