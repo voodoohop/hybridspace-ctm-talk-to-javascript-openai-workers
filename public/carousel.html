@@ -64,7 +64,7 @@
         let currentIndex = 0;
         let autoplayInterval = null;
         let lastImageId = null;
-        let currentMode = 'carousel'; // 'latest' or 'carousel'
+        let currentMode = null; // Will be set based on first image age
         
         // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -97,26 +97,25 @@
                         const imageAge = Date.now() - new Date(latestImage.uploaded).getTime();
                         const shouldShowLatest = imageAge < LATEST_TIMEOUT_MS;
                         
-                        if (shouldShowLatest && currentMode !== 'latest') {
-                            // Switch to latest mode
-                            currentMode = 'latest';
-                            stopAutoplay();
-                            lastImageId = latestImage.id;
-                            displayLatestImage(latestImage);
-                            console.log(`Hybrid mode: Showing latest image (${Math.round(imageAge/1000)}s old)`);
-                        } else if (!shouldShowLatest && currentMode !== 'carousel') {
-                            // Switch to carousel mode
-                            currentMode = 'carousel';
-                            shuffleArray(allImages);
-                            currentIndex = 0;
-                            displayCurrentImage();
-                            startAutoplay();
-                            console.log(`Hybrid mode: Switching to carousel (image ${Math.round(imageAge/1000)}s old)`);
-                        } else if (shouldShowLatest && latestImage.id !== lastImageId) {
-                            // Update latest image if there's a new one
-                            lastImageId = latestImage.id;
-                            displayLatestImage(latestImage);
-                            console.log(`Hybrid mode: Updated to new latest image`);
+                        if (shouldShowLatest) {
+                            // Show latest mode
+                            if (currentMode !== 'latest' || latestImage.id !== lastImageId) {
+                                currentMode = 'latest';
+                                stopAutoplay();
+                                lastImageId = latestImage.id;
+                                displayLatestImage(latestImage);
+                                console.log(`Hybrid mode: Showing latest image (${Math.round(imageAge/1000)}s old)`);
+                            }
+                        } else {
+                            // Show carousel mode
+                            if (currentMode !== 'carousel') {
+                                currentMode = 'carousel';
+                                shuffleArray(allImages);
+                                currentIndex = 0;
+                                displayCurrentImage();
+                                startAutoplay();
+                                console.log(`Hybrid mode: Switching to carousel (image ${Math.round(imageAge/1000)}s old)`);
+                            }
                         }
                     } else {
                         // Original carousel behavior
