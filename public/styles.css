@@ -48,11 +48,11 @@ body::after {
     max-width: 512px;
     width: 100%;
     margin: 0 auto;
-    padding: 1rem 1rem;
+    padding: 2rem 1rem 220px 1rem; /* Added top padding and bottom padding to avoid waveform overlap */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start; /* Changed from center to flex-start to position logo at top */
     text-align: center;
     position: relative;
     z-index: 2;

@@ -28,21 +28,28 @@ document.addEventListener('DOMContentLoaded', () => {
 		cameraStream = result.cameraStream;
 		videoElement = result.videoElement;
 		
-		// Make camera variables globally accessible for test functions
-		window.videoElement = videoElement;
-		window.cameraStream = cameraStream;
+		// Store functions globally for test access
+		const fns = { generateImage, resetSessionImageCount, getSessionImageCount };
 		
 		// Make fns globally accessible for test functions
 		window.fns = fns;
 		
-		// Add test button
-		addTestButton();
+		// Check for hideButtons query parameter
+		const urlParams = new URLSearchParams(window.location.search);
+		const hideButtons = urlParams.get('hideButtons') === 'true';
 		
-		// Add debug session reset button
-		addSessionResetButton();
-		
-		// Add debug navigation buttons
-		addDebugNavButtons();
+		if (!hideButtons) {
+			// Add test button
+			addTestButton();
+			
+			// Add debug session reset button
+			addSessionResetButton();
+			
+			// Add debug navigation buttons
+			addDebugNavButtons();
+		} else {
+			console.log('🚫 Buttons hidden due to hideButtons=true parameter');
+		}
 		
 		// Start session polling
 		startSessionPolling();
@@ -199,25 +206,15 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Create a WebRTC Agent
 		peerConnection = new RTCPeerConnection();
 
-		// On inbound audio add to page
+		// On inbound audio add to page (hidden but functional)
 		peerConnection.ontrack = (event) => {
 			const el = document.createElement('audio');
 			el.srcObject = event.streams[0];
 			el.autoplay = true;
-			el.controls = true;
-			el.style.display = 'block';
-			el.style.margin = '15px auto';
-			el.style.maxWidth = '120px';
-			el.style.width = '120px';
-			el.style.height = '40px';
-			el.style.borderRadius = '20px';
-			el.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-			el.style.border = '1px solid rgba(255, 255, 255, 0.2)';
-			el.style.backdropFilter = 'blur(10px)';
-			el.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.3)';
-			el.style.outline = 'none';
+			el.controls = false; // Hide controls
+			el.style.display = 'none'; // Hide the audio element completely
 			
-			// Insert audio controls in the content div after the logo
+			// Still append to DOM for functionality but hidden
 			const contentDiv = document.querySelector('.content');
 			if (contentDiv) {
 				contentDiv.appendChild(el);
@@ -228,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			// Setup audio visualization for logo animation
 			setupLogoAnimation(event.streams[0]);
 			
-			console.log('Audio controls added to page');
+			console.log('Audio element added (hidden) - waveform visualization active');
 		};
 
 		dataChannel = peerConnection.createDataChannel('response');

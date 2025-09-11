@@ -112,18 +112,36 @@ export async function capturePhotoFromVideo(videoElement) {
 		return null;
 	}
 	
+	// Calculate crop area: Extended by ~15-20% - Left: 15%, Top: 25%, Width: 70%, Height: 75%
+	const sourceWidth = videoElement.videoWidth;
+	const sourceHeight = videoElement.videoHeight;
+	const cropX = Math.floor(sourceWidth * 0.2);
+	const cropY = Math.floor(sourceHeight * 0.3);
+	const cropWidth = Math.floor(sourceWidth * 0.60);
+	const cropHeight = Math.floor(sourceHeight * 0.7);
+	
+	console.log('📸 Crop parameters:', { 
+		sourceWidth, sourceHeight, 
+		cropX, cropY, cropWidth, cropHeight 
+	});
+	
 	const canvas = document.createElement('canvas');
-	canvas.width = videoElement.videoWidth;
-	canvas.height = videoElement.videoHeight;
+	canvas.width = cropWidth;
+	canvas.height = cropHeight;
 	const ctx = canvas.getContext('2d');
 	
 	console.log('📸 Canvas created:', { width: canvas.width, height: canvas.height });
 	
 	try {
-		ctx.drawImage(videoElement, 0, 0);
-		console.log('📸 Image drawn to canvas successfully');
+		// Draw cropped area from video to canvas
+		ctx.drawImage(
+			videoElement,
+			cropX, cropY, cropWidth, cropHeight,  // Source rectangle
+			0, 0, cropWidth, cropHeight           // Destination rectangle
+		);
+		console.log('📸 Cropped image drawn to canvas successfully');
 	} catch (error) {
-		console.error('❌ Failed to draw image to canvas:', error);
+		console.error('❌ Failed to draw cropped image to canvas:', error);
 		return null;
 	}
 	
@@ -168,7 +186,7 @@ export async function initializeCamera() {
 	}
 }
 
-// Logo animation setup
+// Logo animation setup with waveform visualization
 export function setupLogoAnimation(audioStream) {
 	const logo = document.querySelector('.logo');
 	if (!logo) return;
@@ -202,6 +220,9 @@ export function setupLogoAnimation(audioStream) {
 	
 	console.log('Heart element added to logo wrapper');
 	
+	// Create prominent waveform visualization
+	createWaveformVisualization(audioStream);
+	
 	const audioContext = new AudioContext();
 	const source = audioContext.createMediaStreamSource(audioStream);
 	const analyser = audioContext.createAnalyser();
@@ -217,8 +238,8 @@ export function setupLogoAnimation(audioStream) {
 		// Calculate average amplitude
 		const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 		
-		// Scale amplitude to a more subtle range (1.0 to 2.0)
-		const scale = 1 + (average / 255) * 1.0;
+		// Scale amplitude to a more subtle range (1.0 to 1.3) - same minimum, less growth at max
+		const scale = 1 + (average / 255) * 0.3;
 		
 		// Animate only the heart overlay
 		heart.style.transform = `translate(-50%, -50%) scale(${scale})`;
@@ -229,6 +250,145 @@ export function setupLogoAnimation(audioStream) {
 	
 	animate();
 	console.log('Heart-only animation setup complete');
+}
+
+// Create prominent waveform visualization for AI speech feedback
+function createWaveformVisualization(audioStream) {
+	console.log('🌊 Creating waveform visualization for AI speech feedback');
+	
+	// Create waveform container
+	const waveformContainer = document.createElement('div');
+	waveformContainer.id = 'waveform-container';
+	waveformContainer.style.position = 'fixed';
+	waveformContainer.style.top = '50%';
+	waveformContainer.style.left = '50%';
+	waveformContainer.style.transform = 'translate(-50%, -50%)';
+	waveformContainer.style.width = '720px';
+	waveformContainer.style.height = '150px';
+	waveformContainer.style.background = 'rgba(0, 0, 0, 0.8)';
+	waveformContainer.style.borderRadius = '20px';
+	waveformContainer.style.border = '2px solid #FFD400';
+	waveformContainer.style.backdropFilter = 'blur(10px)';
+	waveformContainer.style.boxShadow = '0 8px 32px rgba(255, 212, 0, 0.3)';
+	waveformContainer.style.display = 'flex';
+	waveformContainer.style.alignItems = 'center';
+	waveformContainer.style.justifyContent = 'center';
+	waveformContainer.style.padding = '20px';
+	waveformContainer.style.zIndex = '1000';
+	waveformContainer.style.opacity = '0';
+	waveformContainer.style.transition = 'opacity 0.5s ease-in-out';
+	
+	// Create waveform bars container
+	const barsContainer = document.createElement('div');
+	barsContainer.style.display = 'flex';
+	barsContainer.style.alignItems = 'center';
+	barsContainer.style.justifyContent = 'center';
+	barsContainer.style.gap = '5px';
+	barsContainer.style.height = '100px';
+	
+	// Create individual waveform bars
+	const numBars = 32;
+	const bars = [];
+	
+	for (let i = 0; i < numBars; i++) {
+		const bar = document.createElement('div');
+		bar.style.width = '14px';
+		bar.style.minHeight = '7px';
+		bar.style.height = '7px';
+		bar.style.background = 'linear-gradient(to top, #FFD400, #FFA500)';
+		bar.style.borderRadius = '4px';
+		bar.style.transition = 'height 0.1s ease-out';
+		bar.style.boxShadow = '0 0 8px rgba(255, 212, 0, 0.5)';
+		bars.push(bar);
+		barsContainer.appendChild(bar);
+	}
+	
+	// Add AI speaking indicator text
+	const speakingText = document.createElement('div');
+	speakingText.textContent = 'Prio está falando...';
+	speakingText.style.position = 'absolute';
+	speakingText.style.top = '15px';
+	speakingText.style.left = '50%';
+	speakingText.style.transform = 'translateX(-50%)';
+	speakingText.style.color = '#FFD400';
+	speakingText.style.fontSize = '14px';
+	speakingText.style.fontWeight = '600';
+	speakingText.style.fontFamily = 'Inter, sans-serif';
+	speakingText.style.textShadow = '0 0 10px rgba(255, 212, 0, 0.8)';
+	
+	waveformContainer.appendChild(speakingText);
+	waveformContainer.appendChild(barsContainer);
+	document.body.appendChild(waveformContainer);
+	
+	// Set up audio analysis for waveform
+	const audioContext = new AudioContext();
+	const source = audioContext.createMediaStreamSource(audioStream);
+	const analyser = audioContext.createAnalyser();
+	
+	analyser.fftSize = 128; // Smaller for more responsive bars
+	analyser.smoothingTimeConstant = 0.8;
+	source.connect(analyser);
+	
+	const dataArray = new Uint8Array(analyser.frequencyBinCount);
+	let isVisible = false;
+	let lastActivityTime = 0;
+	const ACTIVITY_THRESHOLD = 15; // Minimum audio level to show waveform
+	const HIDE_DELAY = 2000; // Hide after 2 seconds of silence
+	
+	function animateWaveform() {
+		analyser.getByteFrequencyData(dataArray);
+		
+		// Calculate current audio activity
+		const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+		const hasActivity = average > ACTIVITY_THRESHOLD;
+		
+		if (hasActivity) {
+			lastActivityTime = Date.now();
+			
+			// Show waveform if hidden
+			if (!isVisible) {
+				isVisible = true;
+				waveformContainer.style.opacity = '1';
+				console.log('🌊 Waveform visible - AI is speaking');
+			}
+			
+			// Update each bar with frequency data
+			bars.forEach((bar, index) => {
+				// Map bar index to frequency data (spread across available data)
+				const dataIndex = Math.floor((index / numBars) * dataArray.length);
+				const value = dataArray[dataIndex] || 0;
+				
+				// Scale height based on frequency amplitude (4px to 80px)
+				const height = Math.max(4, (value / 255) * 76 + 4);
+				bar.style.height = `${height}px`;
+				
+				// Add subtle color variation based on frequency
+				const intensity = value / 255;
+				const hue = 45 + (intensity * 15); // Yellow to orange range
+				bar.style.background = `linear-gradient(to top, hsl(${hue}, 100%, 50%), hsl(${hue}, 100%, 65%))`;
+				bar.style.boxShadow = `0 0 ${8 + intensity * 12}px hsla(${hue}, 100%, 50%, ${0.5 + intensity * 0.3})`;
+			});
+		} else {
+			// Hide waveform after delay if no activity
+			if (isVisible && Date.now() - lastActivityTime > HIDE_DELAY) {
+				isVisible = false;
+				waveformContainer.style.opacity = '0';
+				console.log('🌊 Waveform hidden - AI stopped speaking');
+				
+				// Reset bars to minimum height
+				bars.forEach(bar => {
+					bar.style.height = '4px';
+					bar.style.background = 'linear-gradient(to top, #FFD400, #FFA500)';
+					bar.style.boxShadow = '0 0 8px rgba(255, 212, 0, 0.5)';
+				});
+			}
+		}
+		
+		requestAnimationFrame(animateWaveform);
+	}
+	
+	animateWaveform();
+	console.log('🌊 Waveform visualization setup complete');
 }
 
 
@@ -419,7 +579,7 @@ export function showCollectionMessage(userPrompt = '') {
 		collectionMessage.style.fontSize = '20px';
 		collectionMessage.style.fontWeight = '600';
 		collectionMessage.style.fontFamily = 'Inter, sans-serif';
-		collectionMessage.style.margin = '20px auto';
+		collectionMessage.style.margin = '20px auto 0 auto'; /* Remove bottom margin to prevent waveform overlap */
 		collectionMessage.style.maxWidth = '600px';
 		collectionMessage.style.boxShadow = '0 4px 20px rgba(255, 212, 0, 0.3)';
 		collectionMessage.style.border = '2px solid #000';

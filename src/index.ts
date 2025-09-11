@@ -108,9 +108,9 @@ app.post('/rtc-connect', async (c) => {
 
 
 // Base instructions appended to all prompts
-const BASE_PROMPT_INSTRUCTIONS = " - PRESERVE THE PERSON'S EXACT FACIAL FEATURES, eye shape, nose structure, mouth, and facial proportions identically from the original photo. Maintain their unique facial identity completely unchanged. However, optimize their pose and expression for the artwork - ensure eyes are open and alert, head positioning is flattering, and expression shows genuine joy and confidence. Use the reference image examples to guide the artistic style, composition, and PRIO branding elements. Choose one of the three style approaches shown in the reference: (1) industrial urban collage with warm tones, (2) vibrant pop art with geometric elements, or (3) clean illustration with nature/city elements. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈3.5% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.";
+const BASE_PROMPT_INSTRUCTIONS = " - PRESERVE THE PERSON'S EXACT FACIAL FEATURES, eye shape, nose structure, mouth, and facial proportions identically from the original photo. Maintain their unique facial identity completely unchanged. However, optimize their pose and expression for the artwork - ensure eyes are open and alert, head positioning is flattering, and expression shows genuine joy and confidence. Use the reference image examples to guide the artistic style, composition, and PRIO branding elements. 9:16 poster format, 1080×1920, with centered top lockup 'I ♥ PRIO' (not Rio - PRIO) (Montserrat ExtraBold geometric sans; cap-height ≈3.5% of canvas; heart #FFD400 at cap height; tracking −0.03em), baseline ≈5% from top; single hero mid-torso crop, head top ≈12% from top, shoulder line ≈48%; headroom 6–8%; optional subtle decorative octopus motifs in corners or edges that complement the composition; keep readable type zones above top 20% and below bottom 15%; no other text, no watermarks. Clean edges, professional poster vibe; crisp subject separation; high detail; commercial print quality.";
 
-// Helper function to make Azure API call with safety fallback
+// Helper function to make Azure API call with multiple retry attempts and delays
 const makeAzureApiCallWithSafetyFallback = async (azureFormData: FormData, azureApiUrl: string, apiKey: string): Promise<any> => {
 	console.log('🌐 Making Azure OpenAI API request...');
 	
@@ -124,49 +124,75 @@ const makeAzureApiCallWithSafetyFallback = async (azureFormData: FormData, azure
 	}
 	console.log('📋 Original prompt preview:', originalPrompt.substring(0, 150) + '...');
 	
-	// First attempt with original prompt
-	console.log('📤 Sending request to Azure (attempt 1)...');
-	let azureResponse = await fetch(azureApiUrl, {
-		method: 'POST',
-		body: azureFormData,
-		headers: {
-			'api-key': apiKey,
-		},
-	});
+	// Helper function to wait for a delay
+	const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 	
-	console.log('📥 Azure API response received (attempt 1):', {
-		status: azureResponse.status,
-		statusText: azureResponse.statusText,
-		headers: Object.fromEntries(azureResponse.headers.entries())
-	});
+	// Try original prompt twice with delays
+	for (let attempt = 1; attempt <= 2; attempt++) {
+		console.log(`📤 Sending request to Azure (attempt ${attempt} - original prompt)...`);
+		
+		let azureResponse = await fetch(azureApiUrl, {
+			method: 'POST',
+			body: azureFormData,
+			headers: {
+				'api-key': apiKey,
+			},
+		});
+		
+		console.log(`📥 Azure API response received (attempt ${attempt} - original prompt):`, {
+			status: azureResponse.status,
+			statusText: azureResponse.statusText,
+			headers: Object.fromEntries(azureResponse.headers.entries())
+		});
 
-	// Check for any error and retry with safe prompt
-	if (!azureResponse.ok) {
-		const errorText = await azureResponse.text();
-		console.log('❌ First attempt failed - retrying with safe fallback prompt for any error type');
-		
-		// Create safe fallback prompt for any error
-		const safeFallbackPrompt = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Guanabara Bay with the Museum of Tomorrow (Museu do Amanhã) in the background. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood." + BASE_PROMPT_INSTRUCTIONS;
-		
-		// Create new FormData with safe prompt
-		const safeFormData = new FormData();
-		for (const [key, value] of azureFormData.entries()) {
-			if (key === 'prompt') {
-				safeFormData.append('prompt', safeFallbackPrompt);
-			} else {
-				if (value instanceof File) {
-					safeFormData.append(key, value, value.name);
-				} else {
-					safeFormData.append(key, value as string);
-				}
-			}
+		if (azureResponse.ok) {
+			const result: any = await azureResponse.json();
+			console.log('✅ Azure OpenAI image edited successfully:', {
+				hasData: !!result.data,
+				dataLength: result.data?.length,
+				hasB64Json: !!(result.data?.[0]?.b64_json),
+				b64JsonLength: result.data?.[0]?.b64_json?.length
+			});
+			return result;
 		}
 		
-		console.log('📋 Safe fallback prompt preview:', safeFallbackPrompt.substring(0, 150) + '...');
-		console.log('📤 Sending request to Azure (attempt 2 - safe prompt)...');
+		const errorText = await azureResponse.text();
+		console.log(`❌ Attempt ${attempt} with original prompt failed:`, errorText);
 		
-		// Second attempt with safe prompt
-		azureResponse = await fetch(azureApiUrl, {
+		// Wait before next attempt (2 seconds for first retry, 4 seconds before switching to safe prompt)
+		if (attempt < 2) {
+			console.log('⏳ Waiting 2 seconds before retry...');
+			await delay(2000);
+		} else {
+			console.log('⏳ Waiting 4 seconds before trying safe fallback prompt...');
+			await delay(4000);
+		}
+	}
+	
+	// Create safe fallback prompt for moderation issues
+	const safeFallbackPrompt = "A person standing in front of iconic Rio de Janeiro landmarks including Christ the Redeemer statue and Guanabara Bay with the Museum of Tomorrow (Museu do Amanhã) in the background. The scene should be rendered in a vibrant artistic style with warm colors and a celebratory mood." + BASE_PROMPT_INSTRUCTIONS;
+	
+	// Create new FormData with safe prompt
+	const safeFormData = new FormData();
+	for (const [key, value] of azureFormData.entries()) {
+		if (key === 'prompt') {
+			safeFormData.append('prompt', safeFallbackPrompt);
+		} else {
+			if (value instanceof File) {
+				safeFormData.append(key, value, value.name);
+			} else {
+				safeFormData.append(key, value as string);
+			}
+		}
+	}
+	
+	console.log('📋 Safe fallback prompt preview:', safeFallbackPrompt.substring(0, 150) + '...');
+	
+	// Try safe prompt twice with delays
+	for (let attempt = 3; attempt <= 4; attempt++) {
+		console.log(`📤 Sending request to Azure (attempt ${attempt} - safe prompt)...`);
+		
+		let azureResponse = await fetch(azureApiUrl, {
 			method: 'POST',
 			headers: {
 				'api-key': apiKey,
@@ -174,36 +200,89 @@ const makeAzureApiCallWithSafetyFallback = async (azureFormData: FormData, azure
 			body: safeFormData,
 		});
 		
-		console.log('📥 Azure API response received (attempt 2 - safe prompt):', {
+		console.log(`📥 Azure API response received (attempt ${attempt} - safe prompt):`, {
 			status: azureResponse.status,
 			statusText: azureResponse.statusText,
 			headers: Object.fromEntries(azureResponse.headers.entries())
 		});
 		
-		if (!azureResponse.ok) {
-			const safeErrorText = await azureResponse.text();
-			const errorData = {
-				status: azureResponse.status,
-				statusText: azureResponse.statusText,
-				body: safeErrorText,
-				attempt: 2,
-				type: 'safe_fallback_failed',
-				originalError: errorText
-			};
-			console.error('❌ Safe fallback also failed:', errorData);
-			throw new Error(JSON.stringify(errorData));
+		if (azureResponse.ok) {
+			const result: any = await azureResponse.json();
+			console.log('✅ Azure OpenAI image edited successfully with safe prompt:', {
+				hasData: !!result.data,
+				dataLength: result.data?.length,
+				hasB64Json: !!(result.data?.[0]?.b64_json),
+				b64JsonLength: result.data?.[0]?.b64_json?.length
+			});
+			return result;
+		}
+		
+		const safeErrorText = await azureResponse.text();
+		console.log(`❌ Attempt ${attempt} with safe prompt failed:`, safeErrorText);
+		
+		// Wait before final attempt
+		if (attempt < 4) {
+			console.log('⏳ Waiting 3 seconds before final retry...');
+			await delay(3000);
 		}
 	}
-
-	const result: any = await azureResponse.json();
-	console.log('✅ Azure OpenAI image edited successfully:', {
-		hasData: !!result.data,
-		dataLength: result.data?.length,
-		hasB64Json: !!(result.data?.[0]?.b64_json),
-		b64JsonLength: result.data?.[0]?.b64_json?.length
+	
+	// Final attempt with just the base instructions (no custom prompt)
+	console.log('⏳ Waiting 5 seconds before final attempt with base instructions only...');
+	await delay(5000);
+	
+	console.log('📤 Sending request to Azure (attempt 5 - base instructions only)...');
+	
+	// Create FormData with only base instructions
+	const baseOnlyFormData = new FormData();
+	for (const [key, value] of azureFormData.entries()) {
+		if (key === 'prompt') {
+			baseOnlyFormData.append('prompt', BASE_PROMPT_INSTRUCTIONS);
+		} else {
+			if (value instanceof File) {
+				baseOnlyFormData.append(key, value, value.name);
+			} else {
+				baseOnlyFormData.append(key, value as string);
+			}
+		}
+	}
+	
+	let finalResponse = await fetch(azureApiUrl, {
+		method: 'POST',
+		headers: {
+			'api-key': apiKey,
+		},
+		body: baseOnlyFormData,
 	});
 	
-	return result;
+	console.log('📥 Azure API response received (attempt 5 - base instructions only):', {
+		status: finalResponse.status,
+		statusText: finalResponse.statusText,
+		headers: Object.fromEntries(finalResponse.headers.entries())
+	});
+	
+	if (finalResponse.ok) {
+		const result: any = await finalResponse.json();
+		console.log('✅ Azure OpenAI image edited successfully with base instructions only:', {
+			hasData: !!result.data,
+			dataLength: result.data?.length,
+			hasB64Json: !!(result.data?.[0]?.b64_json),
+			b64JsonLength: result.data?.[0]?.b64_json?.length
+		});
+		return result;
+	}
+	
+	const finalErrorText = await finalResponse.text();
+	console.log('❌ Final attempt (base instructions only) also failed:', finalErrorText);
+	
+	// All attempts failed
+	const errorData = {
+		status: 'all_attempts_failed',
+		message: 'All 5 retry attempts failed (2 original + 2 safe prompt + 1 base instructions only)',
+		type: 'moderation_system_issue'
+	};
+	console.error('❌ All retry attempts exhausted:', errorData);
+	throw new Error(JSON.stringify(errorData));
 };
 
 const azureImageEdit = async (c: Context) => {
@@ -471,7 +550,7 @@ app.get('/api/gallery', async (c) => {
 	try {
 		// Fetch images from Cloudflare Images API
 		const response = await fetch(
-			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1?per_page=100`,
+			`https://api.cloudflare.com/client/v4/accounts/${c.env.CLOUDFLARE_ACCOUNT_ID}/images/v1?per_page=300`,
 			{
 				headers: {
 					'Authorization': `Bearer ${c.env.CLOUDFLARE_IMAGES_TOKEN}`,
